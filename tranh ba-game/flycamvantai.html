@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Flycam Vận Tải v3</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{background:#060a18;color:#fff;font-family:sans-serif;text-align:center;min-height:100%;overflow:hidden;user-select:none;}
+#game{display:block;width:100vw;height:100vh;touch-action:none;}
+
+/* ====== TOP OVERLAY: RADAR + PIN + MENU ====== */
+#topStack{
+position:fixed; top:8px; right:8px; z-index:20;
+display:flex; flex-direction:column; align-items:flex-end; gap:6px;
+pointer-events:none;
+}
+#minimap{
+width:150px; height:100px;
+background:rgba(0,20,40,0.78);
+border:2px solid #00d9ff; border-radius:8px;
+box-shadow:0 4px 16px rgba(0,217,255,0.25);
+display:none;
+}
+#minimap.show{ display:block; }
+
+#pinBarWrap{
+width:150px; background:rgba(0,0,0,0.55);
+border:1px solid rgba(0,217,255,0.5); border-radius:8px;
+padding:4px 6px; display:none;
+}
+#pinBarWrap.show{ display:block; }
+#pinLabel{
+font-size:10px; font-weight:bold; color:#00d9ff;
+text-align:left; margin-bottom:2px; letter-spacing:0.5px;
+}
+#pinBarBg{
+width:100%; height:10px; background:rgba(255,255,255,0.12);
+border-radius:5px; overflow:hidden;
+}
+#pinBarFill{
+height:100%; width:100%;
+background:linear-gradient(90deg,#00ff88,#00d9ff);
+border-radius:5px; transition:width 0.15s linear, background 0.3s;
+}
+#pinBarFill.low{ background:linear-gradient(90deg,#ff8800,#ff3333); }
+#pinBarFill.mid{ background:linear-gradient(90deg,#ffdd00,#ffaa00); }
+
+#menuBtn{
+pointer-events:auto;
+width:150px; height:36px;
+background:linear-gradient(135deg, rgba(0,217,255,0.35), rgba(0,102,170,0.35));
+border:2px solid #00d9ff; border-radius:8px;
+color:#fff; font-weight:bold; font-size:14px;
+display:none; align-items:center; justify-content:center;
+cursor:pointer; letter-spacing:1px;
+box-shadow:0 4px 12px rgba(0,217,255,0.3);
+}
+#menuBtn.show{ display:flex; }
+#menuBtn:active{ transform:scale(0.96); }
+
+/* ====== HUD GÓC TRÁI ====== */
+#hud{
+position:fixed; top:8px; left:8px; z-index:20;
+display:flex; flex-direction:column; gap:6px;
+font-size:11px; font-weight:bold; pointer-events:none;
+}
+#hud .row{ display:flex; gap:6px; }
+#hud .item{
+background:rgba(0,217,255,0.18);
+border:1px solid rgba(0,217,255,0.5);
+padding:3px 8px; border-radius:6px;
+}
+#cargoTxt.hasCargo{
+background:rgba(0,255,136,0.25);
+border-color:#00ff88; color:#00ff88;
+}
+
+#msg{
+position:fixed; top:26%; left:50%; transform:translateX(-50%);
+font-size:13px; font-weight:bold; padding:10px 18px;
+border-radius:12px; background:rgba(0,0,0,0.8);
+border:2px solid #00d9ff; color:#fff; max-width:90%;
+z-index:15; display:none; pointer-events:none;
+}
+#msg.show{ display:block; animation:popIn 0.2s ease-out; }
+@keyframes popIn{ from{transform:translateX(-50%) scale(0.8);opacity:0;} to{transform:translateX(-50%) scale(1);opacity:1;} }
+
+/* ====== ĐIỀU KHIỂN ====== */
+#dpad{
+position:fixed; left:14px; bottom:14px;
+width:160px; height:160px; z-index:100; display:none;
+}
+#dpad.show{ display:block; }
+.dbtn{
+position:absolute; width:50px; height:50px;
+background:rgba(0,217,255,0.28);
+border:2px solid rgba(0,217,255,0.85);
+border-radius:12px; font-weight:bold; color:#fff;
+display:flex; align-items:center; justify-content:center;
+font-size:16px; user-select:none;
+}
+#up{top:0;left:55px;} #left{top:55px;left:0;} #down{top:55px;left:55px;} #right{top:55px;left:110px;}
+.dbtn:active{ background:rgba(0,217,255,0.6); transform:scale(0.94); }
+
+#actionStack{
+position:fixed; right:14px; bottom:14px;
+display:none; flex-direction:column; gap:12px; z-index:100;
+}
+#actionStack.show{ display:flex; }
+.abtn{
+width:70px; height:70px; border-radius:50%;
+border:3px solid #fff; color:#fff;
+font-size:30px; font-weight:bold;
+display:flex; align-items:center; justify-content:center;
+box-shadow:0 4px 12px rgba(0,0,0,0.5);
+user-select:none;
+}
+.abtn:active{ transform:scale(0.92); }
+#btnTakeoff{ background:radial-gradient(circle,#00dd66,#006633); }
+#btnLand{ background:radial-gradient(circle,#ffaa00,#cc5500); }
+
+/* ====== OVERLAY START ====== */
+#overlay{
+position:fixed; inset:0; background:rgba(0,0,0,0.9);
+display:flex; flex-direction:column; justify-content:center;
+align-items:center; z-index:500; padding:20px;
+}
+#overlay h2{ color:#00d9ff; margin-bottom:12px; }
+#overlay p{ font-size:13px; line-height:1.7; color:#ccc; margin-bottom:6px; max-width:420px; }
+#overlay .hl{ color:#ffd700; font-weight:bold; }
+#overlay button{
+margin-top:18px; padding:14px 34px; font-size:17px; font-weight:bold;
+border:none; border-radius:12px;
+background:linear-gradient(135deg,#00d9ff,#0066aa);
+color:#fff; cursor:pointer; box-shadow:0 6px 20px rgba(0,217,255,0.4);
+}
+#soundBtn{
+position:fixed; top:70px; left:8px; width:40px; height:34px;
+border-radius:6px; background:rgba(0,217,255,0.2);
+border:2px solid #00d9ff; color:#00d9ff; font-size:16px;
+z-index:30; display:none; align-items:center; justify-content:center; cursor:pointer;
+}
+#soundBtn.show{ display:flex; }
+
+/* ====== MENU "KHÁM PHÁ" ====== */
+#bottomLinks{
+position:fixed; inset:0;
+background:linear-gradient(180deg,#1a3a5c 0%,#0d2137 100%);
+display:none; flex-direction:column; justify-content:center;
+align-items:center; gap:14px; z-index:400; padding:20px;
+overflow-y:auto;
+}
+#bottomLinks.show{ display:flex; }
+
+.bannerShare{
+width:90%; max-width:420px;
+background:linear-gradient(135deg, rgba(0,217,255,0.18), rgba(255,215,0,0.18));
+border:2px dashed #ffd700; border-radius:12px;
+padding:14px 16px; margin-bottom:8px;
+font-size:13px; font-weight:bold; color:#ffe880;
+line-height:1.5; text-align:center;
+box-shadow:0 6px 20px rgba(255,215,0,0.15);
+animation:glowBanner 2.5s ease-in-out infinite;
+}
+@keyframes glowBanner{
+0%,100%{ box-shadow:0 6px 20px rgba(255,215,0,0.15); }
+50%{ box-shadow:0 6px 28px rgba(255,215,0,0.4); }
+}
+
+#bottomLinks h2{
+color:#ffd700; margin-bottom:6px; font-size:18px;
+text-shadow:0 2px 8px rgba(255,215,0,0.4);
+}
+
+.bigBtn{
+display:block; width:85%; max-width:340px;
+padding:14px 22px; font-size:15px; font-weight:bold;
+border-radius:12px; text-decoration:none; color:#fff;
+text-align:center; border:2px solid rgba(255,255,255,0.2);
+box-shadow:0 4px 12px rgba(0,0,0,0.35);
+transition:transform 0.1s;
+}
+.bigBtn:active{ transform:scale(0.97); }
+#goIndex{ background:linear-gradient(135deg,#ff6b6b,#c0392b); }
+#goHeli{ background:linear-gradient(135deg,#00d9ff,#0066aa); }
+#goSnake{ background:linear-gradient(135deg,#7CFC00,#2e8b57); }
+
+#closeMenu{
+background:linear-gradient(135deg,#444,#222);
+color:#fff; padding:12px 30px; border-radius:10px;
+border:2px solid #00d9ff; font-size:14px;
+margin-top:10px; cursor:pointer; font-weight:bold;
+}
+</style>
+</head>
+<body>
+
+<canvas id="game"></canvas>
+
+<!-- ====== HUD GÓC TRÁI ====== -->
+<div id="hud">
+<div class="row">
+<div class="item" id="levelTxt">CHUYẾN 1</div>
+<div class="item" id="cargoTxt">TRỐNG</div>
+</div>
+<div class="row">
+<div class="item" id="scoreTxt">0 điểm</div>
+<div class="item" id="timerTxt">00:00</div>
+</div>
+</div>
+
+<!-- ====== TOP RIGHT STACK: RADAR + PIN + MENU ====== -->
+<div id="topStack">
+<canvas id="minimap" width="150" height="100"></canvas>
+
+<div id="pinBarWrap">
+<div id="pinLabel">🔋 PIN <span id="pinTxt">100%</span></div>
+<div id="pinBarBg"><div id="pinBarFill"></div></div>
+</div>
+
+<div id="menuBtn">☰ KHÁM PHÁ</div>
+</div>
+
+<div id="msg"></div>
+<div id="soundBtn">🔊</div>
+
+<div id="dpad">
+<div class="dbtn" id="up">W</div>
+<div class="dbtn" id="left">A</div>
+<div class="dbtn" id="down">S</div>
+<div class="dbtn" id="right">D</div>
+</div>
+
+<!-- 2 nút đổi chỗ: Cất cánh ở dưới, Hạ cánh ở trên -->
+<!-- Nút Cất cánh ▲ ở TRÊN, Hạ cánh ▼ ở DƯỚI -->
+<div id="actionStack">
+  <div class="abtn" id="btnTakeoff">▲</div>
+  <div class="abtn" id="btnLand">▼</div>
+</div>
+<div id="overlay">
+<h2>🎣 FLYCAM Vận Tải v3</h2>
+<p>Từ <span class="hl">Bến Tàu</span> → bay ra biển tìm <span class="hl">tàu cá</span> → hạ cánh xuống tàu gắp cá → về bến giao + sạc pin.</p>
+<p>⚠️ Drone <b>KHÔNG hạ cánh xuống biển</b> được — chỉ đậu ở bến hoặc trên tàu!</p>
+<p>AI Drone cũng đang cạnh tranh! Ai nhiều chuyến hơn là thắng.</p>
+<p><b>W/S</b>: Ga · <b>A/D</b>: Quay · <b>Space</b> hoặc ▲▼: Cất/Hạ cánh</p>
+<button id="startBtn">🚀 BẮT ĐẦU</button>
+</div>
+
+<div id="bottomLinks">
+<div class="bannerShare">
+🌟 Cùng khám phá những game khác<br>của <span style="color:#00d9ff">TRANH BÁ GAME</span> nhé! 🌟
+</div>
+
+<h2>KHÁM PHÁ GAME KHÁC</h2>
+<a class="bigBtn" id="goIndex" href="index.html">⚔️ TRANH BÁ GAME</a>
+<a class="bigBtn" id="goHeli" href="helicopter.html">🚁 LÁI TRỰC THĂNG</a>
+<a class="bigBtn" id="goSnake" href="snackantu.HTML">🐍 RẮN SĂN MỒI</a>
+<button id="closeMenu">← Đóng</button>
+</div>
+
+<script>
+"use strict";
+
+/* ============================================================
+CONFIG
+============================================================ */
+const CONFIG = {
+MAP_W: 1400, MAP_H: 900,
+BOAT_COUNT: 5,
+PIN_DRAIN_EMPTY: 0.5,
+PIN_DRAIN_CARGO: 0.8,
+PIN_CHARGE_RATE: 12,
+TOUCH_BOAT: 42,
+TOUCH_HARBOR: 55,
+PLAYER_MAX_SPEED_EMPTY: 1.0,
+PLAYER_MAX_SPEED_CARGO: 0.6,
+AI_MAX_SPEED_EMPTY: 0.8,
+AI_MAX_SPEED_CARGO: 0.5,
+CAM_LERP: 0.1,
+// Thu hoạch cá chậm lại để thi đua AI
+FISH_TAKE_MANY: 12, // tàu nhiều cá → lấy 12
+FISH_TAKE_FEW: 6, // tàu ít cá → lấy 6
+FISH_REGEN: 0.35, // hồi cá chậm hơn bản cũ (0.8)
+FISH_REGEN_FROZEN: 0.15,
+};
+
+/* ============================================================
+SFX
+============================================================ */
+class SFX {
+constructor(){
+this.ctx = null;
+this.enabled = true;
+this.masterGain = null;
+this.droneOsc = null;
+this.droneGain = null;
+this.droneLFO = null;
+this.droneRunning = false;
+this.intensity = 0;
+this._started = false;
+}
+init(){
+if(this._started) return;
+try{
+const AC = window.AudioContext || window.webkitAudioContext;
+if(!AC) return;
+this.ctx = new AC();
+this.masterGain = this.ctx.createGain();
+this.masterGain.gain.value = 0.55;
+this.masterGain.connect(this.ctx.destination);
+this._started = true;
+}catch(e){ console.warn("Audio bị chặn", e); }
+}
+resume(){
+if(this.ctx && this.ctx.state === "suspended") this.ctx.resume();
+}
+setEnabled(v){
+this.enabled = v;
+if(this.masterGain) this.masterGain.gain.value = v ? 0.55 : 0;
+}
+tone(freq, dur, type="sine", vol=0.25, when=0){
+if(!this.enabled || !this.ctx) return;
+const t = this.ctx.currentTime + when;
+const o = this.ctx.createOscillator();
+const g = this.ctx.createGain();
+o.type = type;
+o.frequency.setValueAtTime(freq, t);
+g.gain.setValueAtTime(0.0001, t);
+g.gain.linearRampToValueAtTime(vol, t + 0.01);
+g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+o.connect(g); g.connect(this.masterGain);
+o.start(t); o.stop(t + dur + 0.05);
+}
+startDrone(){
+if(!this.ctx || this.droneRunning) return;
+this.droneRunning = true;
+this.droneGain = this.ctx.createGain();
+this.droneGain.gain.value = 0.12;
+this.droneGain.connect(this.masterGain);
+this.droneOsc = this.ctx.createOscillator();
+this.droneOsc.type = "square";
+this.droneOsc.frequency.value = 260;
+this.droneOsc.connect(this.droneGain);
+this.droneLFO = this.ctx.createOscillator();
+this.droneLFO.type = "sawtooth";
+this.droneLFO.frequency.value = 6;
+const lfoGain = this.ctx.createGain();
+lfoGain.gain.value = 0.10;
+this.droneLFO.connect(lfoGain);
+lfoGain.connect(this.droneGain.gain);
+this.droneOsc.start();
+this.droneLFO.start();
+}
+stopDrone(){
+if(!this.droneRunning) return;
+this.droneRunning = false;
+try{
+if(this.droneOsc) this.droneOsc.stop();
+if(this.droneLFO) this.droneLFO.stop();
+if(this.droneGain) this.droneGain.disconnect();
+}catch(e){}
+this.droneOsc = null; this.droneLFO = null; this.droneGain = null;
+}
+setDroneIntensity(v){
+this.intensity = Math.max(0, Math.min(1, v));
+if(this.droneOsc && this.ctx){
+const target = 260 + this.intensity * 260;
+this.droneOsc.frequency.setTargetAtTime(target, this.ctx.currentTime, 0.15);
+}
+}
+takeoff(){
+if(!this.enabled || !this.ctx) return;
+const t = this.ctx.currentTime;
+const o = this.ctx.createOscillator();
+const g = this.ctx.createGain();
+o.type = "sawtooth";
+o.frequency.setValueAtTime(120, t);
+o.frequency.exponentialRampToValueAtTime(520, t + 0.35);
+g.gain.setValueAtTime(0.0001, t);
+g.gain.linearRampToValueAtTime(0.22, t + 0.05);
+g.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+o.connect(g); g.connect(this.masterGain);
+o.start(t); o.stop(t + 0.45);
+}
+landing(){
+if(!this.enabled || !this.ctx) return;
+const t = this.ctx.currentTime;
+const o = this.ctx.createOscillator();
+const g = this.ctx.createGain();
+o.type = "sawtooth";
+o.frequency.setValueAtTime(520, t);
+o.frequency.exponentialRampToValueAtTime(110, t + 0.4);
+g.gain.setValueAtTime(0.0001, t);
+g.gain.linearRampToValueAtTime(0.20, t + 0.05);
+g.gain.exponentialRampToValueAtTime(0.001, t + 0.45);
+o.connect(g); g.connect(this.masterGain);
+o.start(t); o.stop(t + 0.5);
+}
+pickup(){
+if(!this.enabled || !this.ctx) return;
+this.tone(660, 0.10, "triangle", 0.30, 0.00);
+this.tone(880, 0.10, "triangle", 0.30, 0.09);
+this.tone(1200, 0.18, "triangle", 0.30, 0.18);
+}
+deliver(){
+if(!this.enabled || !this.ctx) return;
+this.tone(523, 0.14, "square", 0.22, 0.00);
+this.tone(659, 0.14, "square", 0.22, 0.13);
+this.tone(784, 0.14, "square", 0.22, 0.26);
+this.tone(1046, 0.28, "square", 0.25, 0.39);
+}
+error(){
+if(!this.enabled || !this.ctx) return;
+this.tone(220, 0.18, "square", 0.25, 0);
+this.tone(160, 0.22, "square", 0.25, 0.16);
+}
+charge(){
+if(!this.enabled || !this.ctx) return;
+this.tone(880, 0.10, "sine", 0.15, 0);
+}
+}
+
+/* ============================================================
+UTILS
+============================================================ */
+function clamp(v, min, max){ return v < min ? min : v > max ? max : v; }
+function lerpAngle(cur, target, t){
+let d = target - cur;
+while(d > Math.PI) d -= Math.PI * 2;
+while(d < -Math.PI) d += Math.PI * 2;
+return cur + d * t;
+}
+function dist(a, b){
+const dx = a.x - b.x, dy = a.y - b.y;
+return Math.sqrt(dx*dx + dy*dy);
+}
+
+/* ============================================================
+BOAT
+============================================================ */
+class Boat {
+constructor(){
+this.x = 200 + Math.random() * 600;
+this.y = 150 + Math.random() * 400;
+this.angle = Math.random() * Math.PI * 2;
+this.speed = 8 + Math.random() * 12;
+this.dirTimer = 2 + Math.random() * 3;
+this.fish = 20 + Math.floor(Math.random() * 30);
+this.maxFish = 100;
+this.size = 35;
+this.frozen = false; // bị drone đậu lên
+}
+update(dt){
+// Tàu bị đậu lên → bất động hoàn toàn
+if(this.frozen){
+if(this.fish < this.maxFish) this.fish += CONFIG.FISH_REGEN_FROZEN * dt;
+return;
+}
+this.dirTimer -= dt;
+if(this.dirTimer <= 0){
+this.angle += (-0.5 + Math.random()) * 1.5;
+this.dirTimer = 2 + Math.random() * 3;
+}
+this.x += Math.cos(this.angle) * this.speed * dt;
+this.y += Math.sin(this.angle) * this.speed * dt;
+const M = 50;
+if(this.x < M){ this.x = M; this.angle = Math.PI - this.angle; }
+if(this.x > CONFIG.MAP_W - M){ this.x = CONFIG.MAP_W - M; this.angle = Math.PI - this.angle; }
+if(this.y < M){ this.y = M; this.angle = -this.angle; }
+if(this.y > CONFIG.MAP_H - M){ this.y = CONFIG.MAP_H - M; this.angle = -this.angle; }
+// Hồi cá chậm hơn để thi đua với AI
+if(this.fish < this.maxFish) this.fish += CONFIG.FISH_REGEN * dt;
+if(this.maxFish < 150) this.maxFish += 0.05 * dt;
+}
+}
+
+/* ============================================================
+DRONE BASE
+============================================================ */
+class Drone {
+constructor(x, y, color){
+this.x = x; this.y = y;
+this.angle = -Math.PI / 2;
+this.speed = 0;
+this.landed = true;
+this.size = 20;
+this.color = color;
+this.hasCargo = false;
+this.mission = "to-boat";
+this.delivery = 0;
+this.pin = 100;
+this.rotorPhase = 0;
+}
+updateRotor(dt){
+const spd = this.landed ? 2 : 22 + Math.abs(this.speed) * 20;
+this.rotorPhase += spd * dt;
+}
+getMaxSpeed(){
+return this.hasCargo ? CONFIG.PLAYER_MAX_SPEED_CARGO : CONFIG.PLAYER_MAX_SPEED_EMPTY;
+}
+}
+
+class PlayerDrone extends Drone {
+constructor(x, y){ super(x, y, "#00e0ff"); }
+update(dt, input){
+this.updateRotor(dt);
+if(this.landed) return;
+if(input.left) this.angle -= 2 * dt;
+if(input.right) this.angle += 2 * dt;
+const maxSp = this.getMaxSpeed();
+this.speed = clamp(this.speed, -maxSp * 0.3, maxSp);
+this.x += Math.cos(this.angle) * this.speed * 200 * dt;
+this.y += Math.sin(this.angle) * this.speed * 200 * dt;
+this.x = clamp(this.x, 10, CONFIG.MAP_W - 10);
+this.y = clamp(this.y, 10, CONFIG.MAP_H - 10);
+}
+}
+
+class AIDrone extends Drone {
+constructor(x, y){ super(x, y, "#ff8800"); }
+update(dt, boats, playerDelivery, harborZone){
+this.updateRotor(dt);
+if(this.landed){
+if(this.mission === "to-boat"){
+const t = (this.delivery > playerDelivery)
+? this.findFarthest(boats)
+: this.findNearest(boats);
+if(t){ this.landed = false; this.speed = 0.4; }
+} else {
+this.landed = false; this.speed = 0.4;
+}
+} else {
+const maxSp = this.hasCargo ? CONFIG.AI_MAX_SPEED_CARGO : CONFIG.AI_MAX_SPEED_EMPTY;
+this.speed = Math.min(this.speed, maxSp);
+this.x += Math.cos(this.angle) * this.speed * 180 * dt;
+this.y += Math.sin(this.angle) * this.speed * 180 * dt;
+this.x = clamp(this.x, 10, CONFIG.MAP_W - 10);
+this.y = clamp(this.y, 10, CONFIG.MAP_H - 10);
+this.pin -= (this.hasCargo ? 0.7 : 0.4) * dt;
+if(this.pin <= 0){
+this.x = 1050; this.y = 650;
+this.landed = true; this.speed = 0;
+this.hasCargo = false; this.mission = "to-boat";
+this.pin = 100; this.angle = -Math.PI/2;
+return { died: true };
+}
+if(this.mission === "to-boat" && !this.hasCargo){
+for(const b of boats){
+if(b.fish >= 5 && dist(this, b) < CONFIG.TOUCH_BOAT){
+const amt = Math.min(b.fish >= 30 ? CONFIG.FISH_TAKE_MANY : CONFIG.FISH_TAKE_FEW, Math.floor(b.fish));
+b.fish -= amt;
+this.hasCargo = true;
+this.mission = "back-home";
+break;
+}
+}
+}
+if(dist(this, harborZone) < CONFIG.TOUCH_HARBOR){
+if(this.mission === "back-home" && this.hasCargo){
+this.hasCargo = false;
+this.delivery++;
+this.pin = 100;
+this.mission = "to-boat";
+} else if(!this.hasCargo){
+this.pin = Math.min(100, this.pin + 25 * dt);
+}
+}
+}
+let target;
+if(this.mission === "to-boat"){
+target = (this.delivery > playerDelivery)
+? this.findFarthest(boats)
+: this.findNearest(boats);
+}
+let targetAngle;
+if(target){
+targetAngle = Math.atan2(target.y - this.y, target.x - this.x);
+} else if(this.mission === "back-home"){
+targetAngle = Math.atan2(harborZone.y - this.y, harborZone.x - this.x);
+} else {
+targetAngle = this.angle + 0.5;
+}
+this.angle = lerpAngle(this.angle, targetAngle, Math.min(1, 3 * dt));
+return { died: false };
+}
+findNearest(boats){
+let best = null, bd = Infinity;
+for(const b of boats){
+if(b.fish < 5) continue;
+const d = dist(this, b);
+if(d < bd){ bd = d; best = b; }
+}
+return best;
+}
+findFarthest(boats){
+let best = null, bd = -1;
+for(const b of boats){
+if(b.fish < 5) continue;
+const d = dist(this, b);
+if(d > bd){ bd = d; best = b; }
+}
+return best;
+}
+}
+
+/* ============================================================
+GAME
+============================================================ */
+class Game {
+constructor(canvas, minimapCanvas){
+this.cvs = canvas;
+this.ctx = canvas.getContext("2d");
+this.mm = minimapCanvas;
+this.mmCtx = minimapCanvas.getContext("2d");
+this.W = 0; this.H = 0;
+this.sfx = new SFX();
+
+this.land = { x: 1200, y: 700, w: 250, h: 250 };
+this.harborZone = { x: 1150, y: 680, r: 70 };
+this.boats = [];
+
+this.cam = { x: 700, y: 450, zoom: 1 };
+this.player = null;
+this.ai = null;
+this.input = { left: false, right: false };
+
+this.state = { running: false, over: false };
+this.startTime = 0;
+this.elapsedTime = 0;
+this.score = 0;
+
+this.dpr = window.devicePixelRatio || 1;
+
+this._bindResize();
+this._loop = this._loop.bind(this);
+this._lastTs = 0;
+}
+
+_bindResize(){
+const rz = () => {
+this.W = window.innerWidth;
+this.H = window.innerHeight;
+this.cvs.width = this.W * this.dpr;
+this.cvs.height = this.H * this.dpr;
+this.cvs.style.width = this.W + "px";
+this.cvs.style.height = this.H + "px";
+this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+};
+rz();
+window.addEventListener("resize", rz);
+}
+
+start(){
+this.sfx.init();
+this.sfx.resume();
+
+this.boats = [];
+for(let i = 0; i < CONFIG.BOAT_COUNT; i++) this.boats.push(new Boat());
+
+this.player = new PlayerDrone(this.land.x - 80, this.land.y - 80);
+this.ai = new AIDrone(this.land.x - 160, this.land.y - 30);
+
+this.cam.x = this.land.x;
+this.cam.y = this.land.y;
+this.cam.zoom = 1;
+
+this.state.running = true;
+this.state.over = false;
+this.startTime = performance.now();
+this.elapsedTime = 0;
+this.score = 0;
+
+this.sfx.startDrone();
+this.sfx.setDroneIntensity(0);
+}
+
+endGame(reason){
+this.state.over = true;
+this.state.running = false;
+this.sfx.stopDrone();
+this.sfx.error();
+
+const ov = document.getElementById("overlay");
+ov.innerHTML = `
+<h2 style='color:#f44'>KẾT THÚC</h2>
+<p>${reason}</p>
+<p>Chuyến hoàn thành: <b>${Math.max(0, this.player.delivery)}</b></p>
+<p>Điểm: <b>${this.score}</b></p>
+<button onclick='location.reload()'>CHƠI LẠI</button>
+`;
+ov.style.display = "flex";
+}
+
+_loop(ts){
+if(!this._lastTs) this._lastTs = ts;
+const dt = Math.min((ts - this._lastTs) / 1000, 0.05);
+this._lastTs = ts;
+if(this.state.running && !this.state.over) this.update(dt);
+this.draw();
+requestAnimationFrame(this._loop);
+}
+run(){ requestAnimationFrame(this._loop); }
+
+update(dt){
+this.elapsedTime = (performance.now() - this.startTime) / 1000;
+
+// Cập nhật trạng thái frozen cho tàu (dựa vào drone đậu trên)
+this._updateBoatsFrozen();
+
+for(const b of this.boats) b.update(dt);
+
+const r = this.ai.update(dt, this.boats, this.player.delivery, this.harborZone);
+if(r.died) this._showMsg("AI hết pin — hồi sinh tại bến!", 2);
+
+this.player.update(dt, this.input);
+
+if(!this.player.landed){
+this.player.pin -= (this.player.hasCargo ? CONFIG.PIN_DRAIN_CARGO : CONFIG.PIN_DRAIN_EMPTY) * dt;
+if(this.player.pin <= 0){
+this.player.pin = 0;
+this.endGame("Hết pin!");
+return;
+}
+}
+
+if(this.player.landed){
+this._checkLandedInteractions();
+}
+
+if(this.player.landed && dist(this.player, this.harborZone) < CONFIG.TOUCH_HARBOR && this.player.pin < 100){
+const before = this.player.pin;
+this.player.pin = Math.min(100, this.player.pin + CONFIG.PIN_CHARGE_RATE * dt);
+if(Math.floor(before * 4) !== Math.floor(this.player.pin * 4)) this.sfx.charge();
+}
+
+this.cam.zoom = this.player.landed ? 1.2 : 0.85;
+this.cam.x += (this.player.x - this.cam.x) * CONFIG.CAM_LERP;
+this.cam.y += (this.player.y - this.cam.y) * CONFIG.CAM_LERP;
+
+const targetIntensity = this.player.landed ? 0 : (this.player.hasCargo ? 1.0 : 0.35);
+this.sfx.setDroneIntensity(targetIntensity);
+
+this._updateHUD();
+}
+
+// Cập nhật trạng thái frozen của tất cả tàu
+_updateBoatsFrozen(){
+const p = this.player;
+const ai = this.ai;
+for(const b of this.boats){
+let occupied = false;
+if(p && p.landed && p.mission === "to-boat" && !p.hasCargo){
+if(dist(p, b) < CONFIG.TOUCH_BOAT) occupied = true;
+}
+if(ai && ai.landed && ai.mission === "to-boat" && !ai.hasCargo){
+if(dist(ai, b) < CONFIG.TOUCH_BOAT) occupied = true;
+}
+b.frozen = occupied;
+}
+}
+
+_checkLandedInteractions(){
+const p = this.player;
+if(p.mission === "to-boat" && !p.hasCargo){
+for(const b of this.boats){
+if(b.fish >= 5 && dist(p, b) < CONFIG.TOUCH_BOAT){
+const amt = Math.min(b.fish >= 30 ? CONFIG.FISH_TAKE_MANY : CONFIG.FISH_TAKE_FEW, Math.floor(b.fish));
+b.fish -= amt;
+p.hasCargo = true;
+p.mission = "back-home";
+this.score += amt * 10;
+this.sfx.pickup();
+this._showMsg(`Gắp được ${amt} cá! +${amt * 10}`, 3);
+break;
+}
+}
+}
+if(p.mission === "back-home" && p.hasCargo && dist(p, this.harborZone) < CONFIG.TOUCH_HARBOR){
+p.hasCargo = false;
+p.mission = "to-boat";
+p.delivery++;
+p.pin = 100;
+this.score += 50;
+this.sfx.deliver();
+this._showMsg("Đã giao cá! +50 · Sạc đầy pin", 3);
+}
+}
+
+_updateHUD(){
+const p = this.player;
+document.getElementById("levelTxt").innerText = "CHUYẾN " + Math.max(1, p.delivery + 1);
+const cargoEl = document.getElementById("cargoTxt");
+cargoEl.innerText = p.hasCargo ? "CÓ CÁ" : "TRỐNG";
+if(p.hasCargo) cargoEl.classList.add("hasCargo"); else cargoEl.classList.remove("hasCargo");
+
+// Pin bar
+const pinPct = Math.floor(p.pin);
+document.getElementById("pinTxt").innerText = pinPct + "%";
+const fill = document.getElementById("pinBarFill");
+fill.style.width = pinPct + "%";
+fill.classList.remove("low","mid");
+if(p.pin < 20) fill.classList.add("low");
+else if(p.pin < 50) fill.classList.add("mid");
+
+document.getElementById("scoreTxt").innerText = this.score + " điểm";
+
+const m = Math.floor(this.elapsedTime / 60);
+const s = Math.floor(this.elapsedTime % 60);
+document.getElementById("timerTxt").innerText =
+(m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+}
+
+_showMsg(txt, sec){
+const el = document.getElementById("msg");
+el.innerText = txt;
+el.className = "show";
+clearTimeout(this._msgTimer);
+this._msgTimer = setTimeout(() => { el.className = ""; }, (sec || 2.5) * 1000);
+}
+
+w2s(wx, wy){
+return {
+x: (wx - this.cam.x) * this.cam.zoom + this.W / 2,
+y: (wy - this.cam.y) * this.cam.zoom + this.H / 2
+};
+}
+
+draw(){
+const ctx = this.ctx;
+const g = ctx.createLinearGradient(0, 0, 0, this.H);
+g.addColorStop(0, "#1a3a5c");
+g.addColorStop(1, "#0d2137");
+ctx.fillStyle = g;
+ctx.fillRect(0, 0, this.W, this.H);
+
+this._drawWaves();
+
+// bến + đất liền trước
+this._drawLand();
+this._drawHarbor();
+
+for(const b of this.boats) this._drawBoat(b);
+
+// vòng xoáy nước quanh tàu bị frozen
+for(const b of this.boats){
+if(b.frozen) this._drawFrozenHalo(b);
+}
+
+if(this.player && !this.player.landed) this._drawHintArrow();
+
+if(this.ai) this._drawDrone(this.ai, true);
+if(this.player) this._drawDrone(this.player, false);
+
+this._drawMinimap();
+}
+
+_drawWaves(){
+const ctx = this.ctx;
+const t = performance.now() / 1000;
+ctx.save();
+ctx.globalAlpha = 0.08;
+ctx.strokeStyle = "#7ec8ff";
+ctx.lineWidth = 1.5;
+const step = 80;
+for(let y = -step; y < CONFIG.MAP_H + step; y += step){
+const sp = this.w2s(0, y + Math.sin(t + y * 0.01) * 8);
+ctx.beginPath();
+ctx.moveTo(0, sp.y);
+ctx.lineTo(this.W, sp.y);
+ctx.stroke();
+}
+ctx.restore();
+}
+
+_drawBoat(b){
+const ctx = this.ctx;
+const sp = this.w2s(b.x, b.y);
+ctx.save();
+ctx.translate(sp.x, sp.y);
+ctx.scale(this.cam.zoom, this.cam.zoom);
+ctx.fillStyle = "#8B4513";
+ctx.beginPath();
+ctx.moveTo(-25, -8); ctx.lineTo(25, -8);
+ctx.lineTo(20, 10); ctx.lineTo(-20, 10);
+ctx.closePath(); ctx.fill();
+ctx.fillStyle = "#D2691E"; ctx.fillRect(-15, -14, 30, 8);
+ctx.fillStyle = "#fff"; ctx.fillRect(-8, -12, 16, 4);
+ctx.fillStyle = "#4a90d9";
+ctx.beginPath();
+ctx.moveTo(0, -20); ctx.lineTo(5, -8); ctx.lineTo(-5, -8);
+ctx.closePath(); ctx.fill();
+ctx.restore();
+
+const fishPct = b.fish / b.maxFish;
+ctx.fillStyle = "rgba(0,0,0,0.6)";
+ctx.fillRect(sp.x - 30, sp.y + 20 * this.cam.zoom, 60, 8);
+ctx.fillStyle = fishPct > 0.5 ? "#00ff88" : fishPct > 0.25 ? "#ffaa00" : "#ff4444";
+ctx.fillRect(sp.x - 29, sp.y + 21 * this.cam.zoom, 58 * fishPct, 6);
+ctx.fillStyle = "#fff";
+ctx.font = "bold 10px sans-serif";
+ctx.textAlign = "center";
+ctx.fillText(Math.floor(b.fish), sp.x, sp.y + 36 * this.cam.zoom);
+}
+
+_drawFrozenHalo(b){
+const ctx = this.ctx;
+const sp = this.w2s(b.x, b.y);
+const t = performance.now() / 1000;
+ctx.save();
+ctx.strokeStyle = "rgba(0,255,200," + (0.4 + Math.sin(t * 4) * 0.25) + ")";
+ctx.lineWidth = 2;
+ctx.beginPath();
+ctx.arc(sp.x, sp.y, (CONFIG.TOUCH_BOAT + 6) * this.cam.zoom, 0, Math.PI * 2);
+ctx.stroke();
+ctx.restore();
+}
+
+_drawLand(){
+const ctx = this.ctx;
+const lp = this.w2s(this.land.x - this.land.w / 2, this.land.y - this.land.h / 2);
+ctx.fillStyle = "#2d5a3d";
+ctx.fillRect(lp.x, lp.y, this.land.w * this.cam.zoom, this.land.h * this.cam.zoom);
+ctx.fillStyle = "#1a3d2a";
+ctx.fillRect(
+lp.x + this.land.w * this.cam.zoom * 0.2,
+lp.y + this.land.h * this.cam.zoom * 0.3,
+this.land.w * this.cam.zoom * 0.6,
+this.land.h * this.cam.zoom * 0.7
+);
+}
+
+_drawHarbor(){
+const ctx = this.ctx;
+const hp = this.w2s(this.harborZone.x, this.harborZone.y);
+ctx.fillStyle = "#1e4d6b";
+ctx.beginPath(); ctx.arc(hp.x, hp.y, this.harborZone.r * this.cam.zoom, 0, Math.PI * 2); ctx.fill();
+ctx.fillStyle = "#3d7a8c";
+ctx.beginPath(); ctx.arc(hp.x, hp.y, this.harborZone.r * 0.7 * this.cam.zoom, 0, Math.PI * 2); ctx.fill();
+ctx.fillStyle = "#fff";
+ctx.font = "bold 12px sans-serif";
+ctx.textAlign = "center";
+ctx.fillText("BẾN", hp.x, hp.y + 4);
+}
+
+_drawHintArrow(){
+const ctx = this.ctx;
+let best = null, bd = Infinity;
+for(const b of this.boats){
+if(b.fish < 5) continue;
+const d = dist(this.player, b);
+if(d < bd){ bd = d; best = b; }
+}
+if(!best) return;
+const sp = this.w2s(best.x, best.y);
+if(sp.x > 20 && sp.x < this.W - 20 && sp.y > 20 && sp.y < this.H - 20) return;
+
+const cx = this.W / 2, cy = this.H / 2;
+const angle = Math.atan2(sp.y - cy, sp.x - cx);
+const r = Math.min(this.W, this.H) / 2 - 40;
+const ax = cx + Math.cos(angle) * r;
+const ay = cy + Math.sin(angle) * r;
+
+ctx.save();
+ctx.translate(ax, ay);
+ctx.rotate(angle);
+ctx.fillStyle = "rgba(0,255,136,0.85)";
+ctx.beginPath();
+ctx.moveTo(18, 0); ctx.lineTo(-10, -10); ctx.lineTo(-10, 10);
+ctx.closePath(); ctx.fill();
+ctx.restore();
+}
+
+_drawDrone(d, isAI){
+const ctx = this.ctx;
+const sp = this.w2s(d.x, d.y);
+const z = this.cam.zoom;
+
+ctx.save();
+ctx.translate(sp.x, sp.y);
+ctx.rotate(d.angle + Math.PI / 2);
+
+const armLen = (d.size + 8) * z;
+const bodyR = (d.size * 0.55) * z;
+const rotorR = (7) * z;
+
+ctx.lineWidth = 3 * z;
+ctx.strokeStyle = "#222";
+ctx.lineCap = "round";
+const dirs = [[-1,-1],[1,-1],[-1,1],[1,1]];
+for(const [dx, dy] of dirs){
+ctx.beginPath();
+ctx.moveTo(0, 0);
+ctx.lineTo(dx * armLen * 0.8, dy * armLen * 0.8);
+ctx.stroke();
+}
+
+for(const [dx, dy] of dirs){
+const mx = dx * armLen * 0.8;
+const my = dy * armLen * 0.8;
+ctx.fillStyle = "#444";
+ctx.beginPath();
+ctx.arc(mx, my, rotorR * 0.55, 0, Math.PI * 2);
+ctx.fill();
+
+ctx.save();
+ctx.translate(mx, my);
+ctx.rotate(d.rotorPhase * (dx * dy));
+ctx.globalAlpha = d.landed ? 0.3 : 0.55;
+ctx.fillStyle = isAI ? "#ffcc88" : "#9beaff";
+ctx.beginPath();
+ctx.ellipse(0, 0, rotorR, rotorR * 0.18, 0, 0, Math.PI * 2);
+ctx.fill();
+ctx.beginPath();
+ctx.ellipse(0, 0, rotorR, rotorR * 0.18, Math.PI / 2, 0, Math.PI * 2);
+ctx.fill();
+ctx.globalAlpha = 1;
+ctx.restore();
+
+ctx.strokeStyle = isAI ? "rgba(255,180,80,0.7)" : "rgba(0,224,255,0.7)";
+ctx.lineWidth = 1.2 * z;
+ctx.beginPath();
+ctx.arc(mx, my, rotorR, 0, Math.PI * 2);
+ctx.stroke();
+}
+
+const grad = ctx.createRadialGradient(0, 0, bodyR * 0.2, 0, 0, bodyR);
+grad.addColorStop(0, isAI ? "#ffcc88" : "#bff5ff");
+grad.addColorStop(1, d.color);
+ctx.fillStyle = grad;
+ctx.beginPath();
+ctx.arc(0, 0, bodyR, 0, Math.PI * 2);
+ctx.fill();
+
+const blink = (Math.sin(performance.now() / 200) > 0);
+if(blink){
+ctx.fillStyle = "#ff3344";
+ctx.beginPath();
+ctx.arc(0, -bodyR * 0.5, 2 * z, 0, Math.PI * 2);
+ctx.fill();
+}
+
+ctx.fillStyle = "rgba(0,0,0,0.5)";
+ctx.beginPath();
+ctx.ellipse(0, bodyR * 0.2, bodyR * 0.5, bodyR * 0.35, 0, 0, Math.PI * 2);
+ctx.fill();
+
+if(d.hasCargo){
+ctx.fillStyle = "#4a90d9";
+ctx.beginPath();
+ctx.ellipse(0, -bodyR * 1.6, 6 * z, 4 * z, 0, 0, Math.PI * 2);
+ctx.fill();
+ctx.strokeStyle = "#fff";
+ctx.lineWidth = 1.5 * z;
+ctx.beginPath();
+ctx.moveTo(-4 * z, -bodyR * 1.6); ctx.lineTo(-7 * z, -bodyR * 2.2);
+ctx.moveTo( 4 * z, -bodyR * 1.6); ctx.lineTo( 7 * z, -bodyR * 2.2);
+ctx.stroke();
+}
+
+ctx.restore();
+
+if(isAI){
+const label = "AI: " + d.delivery;
+ctx.save();
+const fs = Math.max(16, 20 * z);
+ctx.font = "900 " + fs + "px sans-serif";
+ctx.textAlign = "center";
+ctx.textBaseline = "middle";
+const txtW = ctx.measureText(label).width;
+const px = 12, py = 8;
+const bx = sp.x - txtW / 2 - px;
+const by = sp.y - 70 * z;
+ctx.fillStyle = "rgba(0,0,0,0.75)";
+ctx.strokeStyle = "#ff8800";
+ctx.lineWidth = 3;
+const bw = txtW + px * 2;
+const bh = fs + py * 2;
+if(ctx.roundRect){
+ctx.beginPath(); ctx.roundRect(bx, by - bh/2, bw, bh, 10); ctx.fill(); ctx.stroke();
+} else {
+ctx.fillRect(bx, by - bh/2, bw, bh);
+ctx.strokeRect(bx, by - bh/2, bw, bh);
+}
+ctx.fillStyle = "#ffd700";
+ctx.fillText(label, sp.x, by + 1);
+ctx.restore();
+}
+}
+
+_drawMinimap(){
+const sx = this.mm.width / CONFIG.MAP_W;
+const sy = this.mm.height / CONFIG.MAP_H;
+const c = this.mmCtx;
+c.clearRect(0, 0, this.mm.width, this.mm.height);
+
+c.fillStyle = "#2d5a3d";
+c.fillRect(
+(this.land.x - this.land.w / 2) * sx,
+(this.land.y - this.land.h / 2) * sy,
+this.land.w * sx, this.land.h * sy
+);
+c.fillStyle = "#3d7a8c";
+c.beginPath();
+c.arc(this.harborZone.x * sx, this.harborZone.y * sy, 4, 0, Math.PI * 2);
+c.fill();
+
+for(const b of this.boats){
+const pct = b.fish / b.maxFish;
+c.fillStyle = pct > 0.5 ? "#00ff88" : pct > 0.25 ? "#ffaa00" : "#ff4444";
+c.beginPath();
+c.arc(b.x * sx, b.y * sy, 3, 0, Math.PI * 2);
+c.fill();
+}
+
+if(this.ai){
+c.fillStyle = "#ff8800";
+c.beginPath();
+c.arc(this.ai.x * sx, this.ai.y * sy, 4, 0, Math.PI * 2);
+c.fill();
+c.strokeStyle = "#000";
+c.lineWidth = 1;
+c.stroke();
+}
+if(this.player){
+c.fillStyle = "#00e0ff";
+c.beginPath();
+c.arc(this.player.x * sx, this.player.y * sy, 4, 0, Math.PI * 2);
+c.fill();
+c.strokeStyle = "#fff";
+c.lineWidth = 1;
+c.stroke();
+}
+}
+}
+
+/* ============================================================
+BOOTSTRAP
+============================================================ */
+const game = new Game(
+document.getElementById("game"),
+document.getElementById("minimap")
+);
+
+const input = game.input;
+window.addEventListener("keydown", (e) => {
+const k = e.key.toLowerCase();
+if(k === "a" || k === "arrowleft") input.left = true;
+if(k === "d" || k === "arrowright") input.right = true;
+if(k === "w" || k === "arrowup"){
+if(game.player && !game.player.landed){
+const m = game.player.getMaxSpeed();
+game.player.speed = Math.min(m, game.player.speed + m * 0.25);
+}
+}
+if(k === "s" || k === "arrowdown"){
+if(game.player && !game.player.landed){
+const m = game.player.getMaxSpeed();
+game.player.speed = Math.max(-m * 0.3, game.player.speed - m * 0.25);
+}
+}
+if(e.key === " "){
+e.preventDefault();
+tryTakeoffLand();
+}
+});
+window.addEventListener("keyup", (e) => {
+const k = e.key.toLowerCase();
+if(k === "a" || k === "arrowleft") input.left = false;
+if(k === "d" || k === "arrowright") input.right = false;
+});
+
+/* ============================================================
+LOGIC CẤT / HẠ CÁNH MỚI
+- Chỉ hạ cánh được xuống: BẾN hoặc TÀU CÁ
+- Không hạ cánh được xuống biển
+- Khi đang đậu trên tàu mà tàu trôi đi → không cho cất cánh? (giữ đơn giản: cho cất cánh bình thường)
+============================================================ */
+function tryTakeoff(){
+const p = game.player;
+if(!p || !p.landed) return;
+p.landed = false;
+p.speed = 0.3;
+game.sfx.takeoff();
+}
+
+function tryLand(){
+const p = game.player;
+if(!p || p.landed) return;
+
+// Kiểm tra có được phép đáp không?
+const onHarbor = dist(p, game.harborZone) < CONFIG.TOUCH_HARBOR;
+
+let onBoat = false;
+for(const b of game.boats){
+if(dist(p, b) < CONFIG.TOUCH_BOAT){ onBoat = true; break; }
+}
+
+// Không ở bến và không trên tàu nào → KHÔNG cho hạ cánh
+if(!onHarbor && !onBoat){
+game.sfx.error();
+game._showMsg("❌ Không thể hạ cánh xuống biển! Chỉ đáp ở Bến hoặc trên Tàu cá.", 3);
+return;
+}
+
+p.landed = true;
+p.speed = 0;
+game.sfx.landing();
+
+if(onBoat && !p.hasCargo && p.mission === "to-boat"){
+game._showMsg("🛬 Đã đáp xuống tàu — tàu dừng lại!", 2);
+} else if(onHarbor){
+game._showMsg("🛬 Đã đáp xuống bến!", 2);
+}
+}
+
+function tryTakeoffLand(){
+const p = game.player;
+if(!p) return;
+if(p.landed) tryTakeoff();
+else tryLand();
+}
+
+/* ============================================================
+BIND BUTTONS
+============================================================ */
+function bindHold(id, on, off){
+const el = document.getElementById(id);
+const start = (e) => { e.preventDefault(); on(); };
+const end = (e) => { e && e.preventDefault(); off && off(); };
+el.addEventListener("touchstart", start, { passive: false });
+el.addEventListener("touchend", end, { passive: false });
+el.addEventListener("touchcancel", end, { passive: false });
+el.addEventListener("mousedown", start);
+el.addEventListener("mouseup", end);
+el.addEventListener("mouseleave", end);
+}
+bindHold("left", () => input.left = true, () => input.left = false);
+bindHold("right", () => input.right = true, () => input.right = false);
+bindHold("up", () => {
+if(game.player && !game.player.landed){
+const m = game.player.getMaxSpeed();
+game.player.speed = Math.min(m, game.player.speed + m * 0.25);
+}
+});
+bindHold("down", () => {
+if(game.player && !game.player.landed){
+const m = game.player.getMaxSpeed();
+game.player.speed = Math.max(-m * 0.3, game.player.speed - m * 0.25);
+}
+});
+
+// Cất cánh (nút ▲) — chỉ hoạt động khi đang đậu
+bindHold("btnTakeoff", () => {
+if(game.player && game.player.landed) tryTakeoff();
+});
+// Hạ cánh (nút ▼) — chỉ hoạt động khi đang bay VÀ được phép đáp
+bindHold("btnLand", () => {
+if(game.player && !game.player.landed) tryLand();
+});
+
+/* ============================================================
+UI
+============================================================ */
+document.getElementById("startBtn").onclick = () => {
+document.getElementById("overlay").style.display = "none";
+document.getElementById("dpad").classList.add("show");
+document.getElementById("actionStack").classList.add("show");
+document.getElementById("minimap").classList.add("show");
+document.getElementById("pinBarWrap").classList.add("show");
+document.getElementById("menuBtn").classList.add("show");
+document.getElementById("soundBtn").classList.add("show");
+game.start();
+game.run();
+game._showMsg("Bấm ▲ (hoặc Space) để cất cánh!", 3);
+};
+
+document.getElementById("menuBtn").onclick = () => {
+document.getElementById("bottomLinks").classList.add("show");
+document.getElementById("bottomLinks").style.display = "flex";
+};
+document.getElementById("closeMenu").onclick = () => {
+document.getElementById("bottomLinks").classList.remove("show");
+document.getElementById("bottomLinks").style.display = "none";
+};
+
+const sndBtn = document.getElementById("soundBtn");
+sndBtn.onclick = () => {
+const on = sndBtn.innerText === "🔊";
+sndBtn.innerText = on ? "🔇" : "🔊";
+game.sfx.setEnabled(!on);
+};
+
+window.addEventListener("blur", () => {
+game.input.left = false;
+game.input.right = false;
+});
+["touchstart","mousedown","click"].forEach(evt => {
+window.addEventListener(evt, () => {
+game.sfx.init();
+game.sfx.resume();
+}, { once: true });
+});
+</script>
+</body>
+</html>

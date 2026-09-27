@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🌸 Giới thiệu - Hoài | Nhất Tín</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+    height: 100%;
+    overflow: hidden;
+    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+}
+
+body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    position: relative;
+}
+
+body::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+        radial-gradient(circle at 20% 30%, rgba(255,255,255,0.15) 0%, transparent 40%),
+        radial-gradient(circle at 80% 70%, rgba(255,255,255,0.1) 0%, transparent 40%);
+    pointer-events: none;
+}
+
+/* === NÚT HOME GÓC TRÊN TRÁI === */
+.home-btn {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 10px 18px;
+    background: rgba(255, 255, 255, 0.95);
+    color: #764ba2;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 14px;
+    border-radius: 30px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.home-btn:hover {
+    background: #fff;
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 10px 28px rgba(102, 126, 234, 0.5);
+    color: #667eea;
+}
+
+.home-btn .icon {
+    font-size: 18px;
+    animation: swing 2.5s ease-in-out infinite;
+}
+
+@keyframes swing {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-12deg); }
+    75% { transform: rotate(12deg); }
+}
+
+/* === TẤM THIỆP === */
+.card {
+    position: relative;
+    width: 100%;
+    max-width: 720px;
+    max-height: calc(100vh - 40px);
+    background: rgba(255, 255, 255, 0.97);
+    border-radius: 24px;
+    padding: 40px 45px;
+    box-shadow:
+        0 25px 60px rgba(0, 0, 0, 0.3),
+        0 0 0 1px rgba(255, 255, 255, 0.5) inset,
+        0 0 60px rgba(240, 147, 251, 0.4);
+    overflow-y: auto;
+    animation: cardIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 2;
+}
+
+.card::-webkit-scrollbar { width: 6px; }
+.card::-webkit-scrollbar-track { background: transparent; }
+.card::-webkit-scrollbar-thumb {
+    background: linear-gradient(#667eea, #f093fb);
+    border-radius: 3px;
+}
+
+@keyframes cardIn {
+    0% { opacity: 0; transform: scale(0.85) translateY(30px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.card::before, .card::after {
+    content: '✨';
+    position: absolute;
+    font-size: 26px;
+    animation: sparkle 2s ease-in-out infinite;
+}
+.card::before { top: 12px; left: 14px; }
+.card::after { bottom: 12px; right: 14px; animation-delay: 1s; }
+
+@keyframes sparkle {
+    0%, 100% { opacity: 0.4; transform: scale(0.9) rotate(0deg); }
+    50% { opacity: 1; transform: scale(1.2) rotate(180deg); }
+}
+/* === TIÊU ĐỀ === */
+.title-badge {
+    display: inline-block;
+    padding: 5px 14px;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    color: #fff;
+    font-size: 12px;
+    font-weight: bold;
+    border-radius: 20px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.card h1 {
+    font-size: 40px;
+    background: linear-gradient(90deg, #667eea, #f093fb, #ff6b9d);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 6px;
+    line-height: 1.15;
+    animation: gradientMove 4s linear infinite;
+    background-size: 200% auto;
+}
+
+@keyframes gradientMove {
+    to { background-position: 200% center; }
+}
+
+.card h1 .wave {
+    -webkit-text-fill-color: initial;
+    display: inline-block;
+    animation: wave 1.5s ease-in-out infinite;
+}
+
+@keyframes wave {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(20deg); }
+    75% { transform: rotate(-20deg); }
+}
+
+.subtitle {
+    font-size: 15px;
+    color: #764ba2;
+    font-weight: 500;
+    margin-bottom: 24px;
+    font-family: 'Courier New', monospace;
+}
+
+.subtitle::before { content: '// '; color: #f093fb; }
+
+.divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 24px 0;
+    color: #bbb;
+    font-size: 14px;
+}
+.divider::before, .divider::after {
+    content: '';
+    flex: 1;
+    height: 1.5px;
+    background: linear-gradient(90deg, transparent, #e0e0e0, transparent);
+}
+
+/* === THÔNG TIN CÁ NHÂN === */
+.info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 24px;
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, #f8f9ff, #f0f4ff);
+    border-radius: 14px;
+    border: 1.5px solid #e8ecff;
+    transition: all 0.25s ease;
+}
+
+.info-item:hover {
+    transform: translateY(-3px);
+    border-color: #667eea;
+    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.18);
+}
+
+.info-icon {
+    font-size: 28px;
+    flex-shrink: 0;
+    animation: bounce 2s ease-in-out infinite;
+}
+
+.info-item:nth-child(2) .info-icon { animation-delay: 0.3s; }
+.info-item:nth-child(3) .info-icon { animation-delay: 0.6s; }
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+}
+
+.info-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+.info-label {
+    font-size: 11px;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-weight: bold;
+}
+
+.info-value {
+    font-size: 15px;
+    color: #302b63;
+    font-weight: 600;
+    word-break: break-word;
+}
+
+.info-value.zalo { color: #0068ff; }
+.info-value.company { color: #ff6b9d; }
+
+/* === ĐOẠN GIỚI THIỆU === */
+.about {
+    background: linear-gradient(135deg, #fff7fc, #f7f9ff);
+    padding: 20px 22px;
+    border-radius: 16px;
+    border-left: 5px solid;
+    border-image: linear-gradient(180deg, #667eea, #f093fb) 1;
+    margin-bottom: 24px;
+    font-size: 15px;
+    line-height: 1.75;
+    color: #444;
+    position: relative;
+}
+
+.about::before {
+    content: '💬';
+    position: absolute;
+    top: -10px;
+    left: 18px;
+    font-size: 20px;
+    background: #fff;
+    padding: 0 6px;
+    border-radius: 50%;
+}
+
+.about strong {
+    color: #764ba2;
+    background: linear-gradient(transparent 65%, #ffe0f0 65%);
+    padding: 0 2px;
+}
+
+/* === KHU VỰC ZALO + QR === */
+.contact-box {
+    background: linear-gradient(135deg, #eef5ff, #f0f4ff);
+    border: 1.5px solid #d9e6ff;
+    border-radius: 18px;
+    padding: 20px;
+    margin-bottom: 22px;
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+/* QR bên trái */
+.qr-side {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.qr-frame {
+    width: 130px;
+    height: 130px;
+    padding: 8px;
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 6px 18px rgba(0, 104, 255, 0.2);
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.qr-frame:hover {
+    transform: scale(1.06) rotate(-2deg);
+    box-shadow: 0 10px 28px rgba(0, 104, 255, 0.4);
+}
+
+.qr-frame img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    border-radius: 6px;
+}
+
+.qr-label {
+    font-size: 11.5px;
+    color: #0068ff;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: center;
+}
+
+/* Nút Zalo bên phải */
+.zalo-side {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+}
+
+.zalo-title {
+    font-size: 13px;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-weight: bold;
+}
+
+.zalo-phone {
+    font-size: 22px;
+    font-weight: bold;
+    color: #0068ff;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 1.5px;
+    word-break: break-all;
+}
+
+.zalo-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 13px 24px;
+    background: linear-gradient(90deg, #0068ff, #00b4ff);
+    color: #fff;
+    text-decoration: none;
+    font-size: 15px;
+    font-weight: bold;
+    border-radius: 30px;
+    box-shadow: 0 8px 20px rgba(0, 104, 255, 0.35);
+    transition: all 0.3s ease;
+    animation: pulse 2.5s ease-in-out infinite;
+    white-space: nowrap;
+}
+
+.zalo-btn:hover {
+    transform: translateY(-3px) scale(1.03);
+box-shadow: 0 14px 30px rgba(0, 104, 255, 0.5);
+    animation: none;
+}
+
+@keyframes pulse {
+    0%, 100% { box-shadow: 0 8px 20px rgba(0, 104, 255, 0.35); }
+    50% { box-shadow: 0 8px 30px rgba(0, 104, 255, 0.6); }
+}
+
+.zalo-btn .icon { font-size: 18px; }
+
+/* === TAGS === */
+.tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 22px;
+}
+
+.tag {
+    padding: 6px 14px;
+    background: #fff;
+    border: 1.5px solid #e0e0ff;
+    border-radius: 20px;
+    font-size: 12.5px;
+    color: #667eea;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.tag:hover {
+    background: #667eea;
+    color: #fff;
+    border-color: #667eea;
+    transform: translateY(-2px);
+}
+
+/* === FOOTER === */
+.card-footer {
+    text-align: center;
+    padding-top: 18px;
+    border-top: 1.5px dashed #e0e0e0;
+    font-size: 13px;
+    color: #999;
+    font-family: 'Courier New', monospace;
+}
+
+.card-footer .heart {
+    color: #ff6b9d;
+    display: inline-block;
+    animation: heartBeat 1.2s ease-in-out infinite;
+}
+
+@keyframes heartBeat {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.25); }
+}
+
+/* === EMOJI ĐỘNG VẬT CHẠY VIỀN === */
+.animal {
+    position: fixed;
+    font-size: 34px;
+    pointer-events: none;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.25));
+    z-index: 1;
+}
+
+.animal-top { top: 12px; animation: runRight 12s linear infinite; }
+.animal-top.alt { top: 60px; animation: runLeft 15s linear infinite; }
+.animal-top.alt2 { top: 108px; animation: runRight 18s linear infinite; font-size: 28px; }
+
+.animal-bottom { bottom: 12px; animation: runLeft 14s linear infinite; }
+.animal-bottom.alt { bottom: 60px; animation: runRight 17s linear infinite; }
+.animal-bottom.alt2 { bottom: 108px; animation: runLeft 20s linear infinite; font-size: 28px; }
+
+@keyframes runRight {
+    0% { left: -60px; transform: scaleX(1); }
+    100% { left: calc(100% + 60px); transform: scaleX(1); }
+gap: 20px;
+    align-items: center;
+}
+
+/* QR bên trái */
+.qr-side {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.qr-frame {
+    width: 130px;
+    height: 130px;
+    padding: 8px;
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 6px 18px rgba(0, 104, 255, 0.2);
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.qr-frame:hover {
+    transform: scale(1.06) rotate(-2deg);
+    box-shadow: 0 10px 28px rgba(0, 104, 255, 0.4);
+}
+
+.qr-frame img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    border-radius: 6px;
+}
+
+.qr-label {
+    font-size: 11.5px;
+    color: #0068ff;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: center;
+}
+
+/* Nút Zalo bên phải */
+.zalo-side {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+}
+
+.zalo-title {
+    font-size: 13px;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-weight: bold;
+}
+
+.zalo-phone {
+    font-size: 22px;
+    font-weight: bold;
+    color: #0068ff;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 1.5px;
+    word-break: break-all;
+}
+
+.zalo-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 13px 24px;
+    background: linear-gradient(90deg, #0068ff, #00b4ff);
+    color: #fff;
+    text-decoration: none;
+    font-size: 15px;
+    font-weight: bold;
+    border-radius: 30px;
+    box-shadow: 0 8px 20px rgba(0, 104, 255, 0.35);
+    transition: all 0.3s ease;
+    animation: pulse 2.5s ease-in-out infinite;
+    white-space: nowrap;
+}
+
+.zalo-btn:hover {
+    transform: translateY(-3px) scale(1.03);
+    box-shadow: 0 14px 30px rgba(0, 104, 255, 0.5);
+    animation: none;
+}
+
+@keyframes pulse {
+    0%, 100% { box-shadow: 0 8px 20px rgba(0, 104, 255, 0.35); }
+    50% { box-shadow: 0 8px 30px rgba(0, 104, 255, 0.6); }
+}
+
+.zalo-btn .icon { font-size: 18px; }
+
+/* === TAGS === */
+.tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 22px;
+}
+
+.tag {
+    padding: 6px 14px;
+    background: #fff;
+    border: 1.5px solid #e0e0ff;
+    border-radius: 20px;
+    font-size: 12.5px;
+    color: #667eea;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.tag:hover {
+    background: #667eea;
+    color: #fff;
+    border-color: #667eea;
+    transform: translateY(-2px);
+}
+
+/* === FOOTER === */
+.card-footer {
+    text-align: center;
+    padding-top: 18px;
+    border-top: 1.5px dashed #e0e0e0;
+    font-size: 13px;
+    color: #999;
+    font-family: 'Courier New', monospace;
+}
+
+.card-footer .heart {
+    color: #ff6b9d;
+    display: inline-block;
+    animation: heartBeat 1.2s ease-in-out infinite;
+}
+
+@keyframes heartBeat {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.25); }
+}
+
+/* === EMOJI ĐỘNG VẬT CHẠY VIỀN === */
+.animal {
+    position: fixed;
+    font-size: 34px;
+    pointer-events: none;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.25));
+    z-index: 1;
+}
+
+.animal-top { top: 12px; animation: runRight 12s linear infinite; }
+.animal-top.alt { top: 60px; animation: runLeft 15s linear infinite; }
+.animal-top.alt2 { top: 108px; animation: runRight 18s linear infinite; font-size: 28px; }
+
+.animal-bottom { bottom: 12px; animation: runLeft 14s linear infinite; }
+.animal-bottom.alt { bottom: 60px; animation: runRight 17s linear infinite; }
+.animal-bottom.alt2 { bottom: 108px; animation: runLeft 20s linear infinite; font-size: 28px; }
+
+@keyframes runRight {
+    0% { left: -60px; transform: scaleX(1); }
+    100% { left: calc(100% + 60px); transform: scaleX(1); }
+}
+
+@keyframes runLeft {
+    0% { left: calc(100% + 60px); transform: scaleX(-1); }
+    100% { left: -60px; transform: scaleX(-1); }
+}
+
+.animal-left { left: 12px; animation: runDown 16s linear infinite; }
+.animal-left.alt { left: 60px; animation: runUp 19s linear infinite; }
+
+.animal-right { right: 12px; animation: runUp 15s linear infinite; }
+.animal-right.alt { right: 60px; animation: runDown 18s linear infinite; }
+
+@keyframes runDown {
+    0% { top: -60px; }
+    100% { top: calc(100% + 60px); }
+}
+
+@keyframes runUp {
+    0% { top: calc(100% + 60px); }
+    100% { top: -60px; }
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 720px) {
+    .card { padding: 30px 22px; }
+    .card h1 { font-size: 28px; }
+    .info-grid { grid-template-columns: 1fr; }
+    .animal { font-size: 24px; }
+    .animal-top.alt2, .animal-bottom.alt2 { font-size: 20px; }
+    .home-btn { padding: 8px 14px; font-size: 12.5px; }
+    .home-btn .icon { font-size: 15px; }
+
+    .contact-box {
+        flex-direction: column;
+        padding: 18px;
+    }
+    .qr-frame { width: 150px; height: 150px; }
+    .zalo-side { text-align: center; width: 100%; }
+    .zalo-phone { font-size: 20px; }
+    .zalo-btn { padding: 12px 20px; font-size: 14px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ===== NÚT HOME ===== -->
+<a class="home-btn" href="index.html">
+    <span class="icon">🏠</span>
+    <span>Trang chủ</span>
+</a>
+
+<!-- ===== EMOJI ĐỘNG VẬT CHẠY VIỀN ===== -->
+<span class="animal animal-top">🐱</span>
+<span class="animal animal-top alt">🐶</span>
+<span class="animal animal-top alt2">🐰</span>
+<span class="animal animal-top" style="animation-delay: 4s;">🦊</span>
+<span class="animal animal-top alt" style="animation-delay: 6s;">🐼</span>
+<span class="animal animal-top alt2" style="animation-delay: 8s;">🐨</span>
+
+<span class="animal animal-bottom">🐵</span>
+<span class="animal animal-bottom alt">🐸</span>
+<span class="animal animal-bottom alt2">🐥</span>
+<span class="animal animal-bottom" style="animation-delay: 5s;">🐷</span>
+<span class="animal animal-bottom alt" style="animation-delay: 7s;">🐮</span>
+<span class="animal animal-bottom alt2" style="animation-delay: 9s;">🐯</span>
+
+<span class="animal animal-left">🐢</span>
+<span class="animal animal-left alt">🐝</span>
+<span class="animal animal-left" style="animation-delay: 8s;">🦋</span>
+
+<span class="animal animal-right">🐙</span>
+<span class="animal animal-right alt">🦉</span>
+<span class="animal animal-right" style="animation-delay: 8s;">🐧</span>
+
+<!-- ===== TẤM THIỆP ===== -->
+<div class="card">
+
+    <div class="title-badge">👋 Xin chào, mình là</div>
+    <h1>Hoài <span class="wave">🌸</span></h1>
+    <div class="subtitle">CTY Nhất Tín · Yêu công nghệ · Thích kết bạn</div>
+
+    <div class="divider">✨ Thông tin liên hệ ✨</div>
+
+    <div class="info-grid">
+        <div class="info-item">
+            <div class="info-icon">👤</div>
+            <div class="info-text">
+                <span class="info-label">Tên</span>
+                <span class="info-value">Hoài</span>
+            </div>
+        </div>
+        <div class="info-item">
+            <div class="info-icon">🏢</div>
+            <div class="info-text">
+                <span class="info-label">Công ty</span>
+                <span class="info-value company">Nhất Tín</span>
+            </div>
+        </div>
+        <div class="info-item" style="grid-column: 1 / -1;">
+            <div class="info-icon">📱</div>
+            <div class="info-text">
+                <span class="info-label">Zalo</span>
+                <span class="info-value zalo">0934 259 698</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="divider">🐾 Đôi lời chia sẻ 🐾</div>
+
+    <div class="about">
+        Mình là <strong>Hoài</strong>, hiện đang làm việc tại <strong>CTY Nhất Tín</strong>.
+        Mình có niềm đam mê với <strong>công nghệ</strong>, thích tìm tòi, học hỏi và chia sẻ
+        những gì mình biết với mọi người. Mình mong được <strong>kết bạn</strong> với nhiều
+        anh chị em cùng đam mê công nghệ, cùng nhau học tập và phát triển.
+        <br><br>
+        Đặc biệt, mình sẵn sàng <strong>hướng dẫn mọi người làm quen với AI</strong> — từ những
+        bước cơ bản nhất cho đến khi có thể ứng dụng vào công việc và cuộc sống. Không cần
+        biết trước gì cả, chỉ cần bạn có <strong>đam mê</strong> và <strong>kiên nhẫn</strong> 💪
+    </div>
+
+    <div class="divider">💬 Kết bạn với mình nhé 💬</div>
+
+    <!-- ===== KHU VỰC ZALO + QR ===== -->
+    <div class="contact-box">
+
+        <!-- QR BÊN TRÁI -->
+        <div class="qr-side">
+            <div class="qr-frame">
+                <!--
+                    🔽 THAY ẢNH QR THẬT CỦA BẠN VÀO ĐÂY:
+                    Đặt file qr-zalo.png cùng thư mục rồi đổi src="qr-zalo.png"
+                -->
+                <img
+                    src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&da…tps%3A%2F%2Fzalo.me%2F0934259698&color=0068ff&bgcolor=ffffff"
+                    alt="QR Zalo Hoài"
+                >
+            </div>
+            <div class="qr-label">📷 Quét QR kết bạn</div>
+        </div>
+
+        <!-- NÚT ZALO BÊN PHẢI -->
+        <div class="zalo-side">
+            <div class="zalo-title">☎️ Zalo của mình</div>
+            <div class="zalo-phone">0934 259 698</div>
+            <a class="zalo-btn" href="https://zalo.me/0934259698" target="_blank">
+                <span class="icon">💬</span>
+                Kết bạn Zalo ngay
+            </a>
+        </div>
+
+    </div>
+
+    <div class="tags">
+        <span class="tag">💻 Lập trình</span>
+        <span class="tag">🤖 AI</span>
+        <span class="tag">🌱 Học hỏi</span>
+        <span class="tag">🤝 Kết bạn</span>
+        <span class="tag">🚀 Công nghệ</span>
+        <span class="tag">☕ Cà phê</span>
+    </div>
+
+    <div class="card-footer">
+        Made with <span class="heart">❤️</span> by Hoài · <span style="color:#667eea;">while (true) { learn(); share(); }</span>
+    </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Máy Xúc Lấp Kênh</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{background:#0a0f08;color:#fff;font-family:sans-serif;overflow:hidden;user-select:none;}
+#game{display:block;width:100vw;height:100vh;touch-action:none;}
+
+#hud{
+position:fixed; top:8px; left:8px; z-index:20;
+display:flex; flex-direction:column; gap:6px; font-size:11px; font-weight:bold;
+pointer-events:none;
+}
+#hud .row{ display:flex; gap:6px; align-items:center; }
+.chip{
+background:rgba(180,140,60,0.25);
+border:1px solid rgba(255,200,100,0.6);
+padding:4px 10px; border-radius:6px;
+color:#ffd97a;
+}
+#fillBadge{
+font-size:22px; padding:8px 18px;
+background:rgba(200,150,60,0.35);
+border:2px solid #ffd700;
+color:#fff2c0;
+border-radius:10px;
+box-shadow:0 0 14px rgba(255,215,0,0.55);
+letter-spacing:1px;
+}
+#fillBadge .total{ font-size:14px; color:#ffd97a; }
+
+#topStack{
+position:fixed; top:8px; right:8px; z-index:20;
+display:flex; flex-direction:column; align-items:flex-end; gap:6px;
+pointer-events:none;
+}
+#minimap{
+width:150px; height:100px;
+background:rgba(30,20,10,0.8);
+border:2px solid #d9a34a; border-radius:8px;
+display:none;
+}
+#minimap.show{ display:block; }
+
+#fuelWrap{
+width:150px; background:rgba(0,0,0,0.6);
+border:1px solid rgba(255,180,80,0.6); border-radius:8px;
+padding:4px 6px; display:none;
+}
+#fuelWrap.show{ display:block; }
+#fuelLabel{ font-size:10px; color:#ffb84a; text-align:left; margin-bottom:2px; font-weight:bold; }
+#fuelBarBg{
+width:100%; height:10px; background:rgba(255,255,255,0.12);
+border-radius:5px; overflow:hidden;
+}
+#fuelBarFill{
+height:100%; width:100%;
+background:linear-gradient(90deg,#f0c860,#ff8800);
+transition:width 0.15s linear;
+}
+#fuelBarFill.low{ background:linear-gradient(90deg,#ff5500,#ff2233); }
+
+#menuBtn{
+pointer-events:auto;
+width:150px; height:36px;
+background:linear-gradient(135deg, rgba(200,140,60,0.4), rgba(120,80,30,0.4));
+border:2px solid #d9a34a; border-radius:8px;
+color:#ffd97a; font-weight:bold; font-size:14px;
+display:none; align-items:center; justify-content:center; cursor:pointer;
+letter-spacing:1px;
+}
+#menuBtn.show{ display:flex; }
+#menuBtn:active{ transform:scale(0.96); }
+
+#soundBtn{
+position:fixed; top:8px; left:180px; width:40px; height:34px;
+border-radius:6px; background:rgba(200,140,60,0.3);
+border:2px solid #d9a34a; color:#ffd97a; font-size:16px;
+z-index:30; display:none; align-items:center; justify-content:center; cursor:pointer;
+}
+#soundBtn.show{ display:flex; }
+
+#msg{
+position:fixed; top:30%; left:50%; transform:translateX(-50%);
+font-size:14px; font-weight:bold; padding:10px 20px;
+border-radius:12px; background:rgba(0,0,0,0.85);
+border:2px solid #ffb84a; color:#fff; max-width:90%;
+z-index:15; display:none; pointer-events:none;
+}
+#msg.show{ display:block; animation:pop 0.2s ease-out; }
+@keyframes pop{ from{transform:translateX(-50%) scale(0.8);opacity:0;} to{transform:translateX(-50%) scale(1);opacity:1;} }
+
+.stick{
+position:fixed; bottom:14px; width:160px; height:110px; z-index:100;
+display:none;
+}
+.stick.show{ display:block; }
+.stick.left{ left:53px; }
+
+.cellBtn{
+position:absolute; width:53px; height:55px;
+background:rgba(255,180,80,0.08);
+border:1.5px dashed rgba(255,180,80,0.4);
+border-radius:8px;
+display:flex; align-items:center; justify-content:center;
+font-size:22px; font-weight:900; color:rgba(255,220,150,0.35);
+user-select:none; cursor:pointer;
+}
+.cellBtn:active{ background:rgba(255,180,80,0.35); }
+.cellBtn.tapped{ background:rgba(255,180,80,0.45); color:#fff; }
+
+.c1{ top:0; left:0; }
+.c2{ top:0; left:53px; }
+.c3{ top:0; left:106px; }
+.c4{ top:55px; left:0; }
+.c5{ top:55px; left:53px; }
+.c6{ top:55px; left:106px; }
+
+#dumpBtn{
+position:fixed; right:14px; bottom:140px;
+width:80px; height:80px; border-radius:50%;
+background:radial-gradient(circle,#ffcc44,#996600);
+border:3px solid #fff;
+color:#2a1a00; font-size:13px; font-weight:900;
+display:none; align-items:center; justify-content:center;
+z-index:100; cursor:pointer;
+box-shadow:0 4px 14px rgba(255,200,80,0.6);
+text-align:center; line-height:1.1;
+}
+#dumpBtn.show{ display:flex; }
+#dumpBtn:active{ transform:scale(0.92); }
+
+#overlay{
+position:fixed; inset:0; background:rgba(0,0,0,0.92);
+display:flex; flex-direction:column; justify-content:center; align-items:center;
+z-index:500; padding:20px; text-align:center;
+}
+#overlay h2{ color:#ffb84a; margin-bottom:12px; }
+#overlay p{ font-size:13px; line-height:1.7; color:#ccc; margin-bottom:6px; max-width:440px; }
+#overlay .hl{ color:#ffd700; font-weight:bold; }
+#overlay button{
+margin-top:18px; padding:14px 34px; font-size:17px; font-weight:bold;
+border:none; border-radius:12px;
+background:linear-gradient(135deg,#ffb84a,#a06020);
+color:#fff; cursor:pointer;
+box-shadow:0 6px 20px rgba(255,180,80,0.4);
+}
+
+#bottomLinks{
+position:fixed; inset:0;
+background:linear-gradient(180deg,#2a1e10 0%,#0f0a05 100%);
+display:none; flex-direction:column; justify-content:center; align-items:center;
+gap:14px; z-index:400; padding:20px; overflow-y:auto;
+}
+#bottomLinks.show{ display:flex; }
+.bannerShare{
+width:90%; max-width:420px;
+background:linear-gradient(135deg, rgba(255,200,80,0.2), rgba(255,215,0,0.2));
+border:2px dashed #ffd700; border-radius:12px;
+padding:14px; margin-bottom:8px; text-align:center;
+font-size:13px; font-weight:bold; color:#ffe880; line-height:1.5;
+}
+#bottomLinks h2{ color:#ffd700; font-size:18px; margin-bottom:2px;}
+#uploadNote{
+color:#ff9b9b; font-size:13px; font-weight:bold;
+background:rgba(255,80,80,0.15);
+border:1px dashed rgba(255,120,120,0.6);
+padding:6px 14px; border-radius:8px; margin-bottom:4px;
+}
+.bigBtn{
+display:block; width:85%; max-width:340px;
+padding:14px 22px; font-size:15px; font-weight:bold;
+border-radius:12px; text-decoration:none; color:#fff; text-align:center;
+}
+#goIndex{ background:linear-gradient(135deg,#ff6b6b,#a02020); }
+#goXuc{ background:linear-gradient(135deg,#ffb84a,#a06020); }
+#goRan{ background:linear-gradient(135deg,#7CFC00,#2e8b57); }
+.newBtn{ background:linear-gradient(135deg,#5a5a5a,#2a2a2a); border:1px dashed #999; }
+#closeMenu{
+background:linear-gradient(135deg,#444,#222); color:#fff;
+padding:12px 30px; border-radius:10px; border:2px solid #ffb84a;
+font-size:14px; cursor:pointer; font-weight:bold; margin-top:6px;
+}
+</style>
+</head>
+<body>
+
+<canvas id="game"></canvas>
+
+<div id="hud">
+<div class="row">
+<div id="fillBadge">0<span class="total">/50</span></div>
+</div>
+<div class="row">
+<div class="chip" id="levelTxt">LEVEL 1</div>
+<div class="chip" id="aiTxt">AI: 0</div>
+</div>
+<div class="row">
+<div class="chip" id="timeTxt">00:00</div>
+</div>
+</div>
+
+<div id="topStack">
+<canvas id="minimap" width="150" height="100"></canvas>
+<div id="fuelWrap">
+<div id="fuelLabel">⛽ DẦU <span id="fuelTxt">100%</span></div>
+<div id="fuelBarBg"><div id="fuelBarFill"></div></div>
+</div>
+<div id="menuBtn">☰ KHÁM PHÁ</div>
+</div>
+
+<div id="soundBtn">🔊</div>
+<div id="msg"></div>
+
+<div class="stick left" id="stickL">
+<div class="cellBtn c1" data-key="1">⇧<br><span style="font-size:9px">TRÁI</span></div>
+<div class="cellBtn c2" data-key="2">⇧<br><span style="font-size:9px">2 BÁNH</span></div>
+<div class="cellBtn c3" data-key="3">⇧<br><span style="font-size:9px">PHẢI</span></div>
+<div class="cellBtn c4" data-key="4">⇩<br><span style="font-size:9px">TRÁI</span></div>
+<div class="cellBtn c5" data-key="5">⇩<br><span style="font-size:9px">2 BÁNH</span></div>
+<div class="cellBtn c6" data-key="6">⇩<br><span style="font-size:9px">PHẢI</span></div>
+</div>
+
+<div id="dumpBtn">NHẢ<br>CÁT</div>
+
+<div id="overlay">
+<h2>🚜 MÁY XÚC LẤP KÊNH</h2>
+<p>Dùng cụm nút bên dưới để điều khiển 2 bánh xích.</p>
+<p><b>Hàng trên ⇧</b>: tiến · <b>Hàng dưới ⇩</b>: lùi</p>
+<p>Nút <span class="hl">1</span>: bánh trái · Nút <span class="hl">3</span>: bánh phải · Nút <span class="hl">2</span>: cả 2 bánh</p>
+<p>Húc gầu vào đống cát để múc. Bấm <span class="hl">NHẢ CÁT</span> khi đứng trên kênh.</p>
+<p>Lấp đầy kênh nhiều hơn AI để <span class="hl">thắng</span> và nâng cấp!</p>
+<button id="startBtn">🚀 BẮT ĐẦU</button>
+</div>
+
+<div id="bottomLinks">
+<div class="bannerShare">
+🌟 Cùng khám phá những game khác<br>của <span style="color:#ffb84a">TRANH BÁ GAME</span> nhé! 🌟
+</div>
+<div id="uploadNote">⏳ GAME ĐANG UPLOAD...</div>
+<h2>KHÁM PHÁ GAME KHÁC</h2>
+<a class="bigBtn" id="goIndex" href="index.html">⚔️ TRANH BÁ GAME</a>
+<a class="bigBtn" id="goXuc" href="flycam.html">🎣 FLYCAM ĐÁNH CÁ</a>
+<a class="bigBtn" id="goRan" href="snackantu.HTML">🐍 RẮN SĂN MỒI</a>
+<a class="bigBtn newBtn" href="index.html">🆕 GAME 4 (coming)</a>
+<a class="bigBtn newBtn" href="index.html">🆕 GAME 5 (coming)</a>
+<a class="bigBtn newBtn" href="index.html">🆕 GAME 6 (coming)</a>
+<button id="closeMenu">← Đóng</button>
+</div>
+
+<script>
+"use strict";
+
+/* ============================ CONFIG ============================ */
+const CFG = {
+MAP_W: 2200, MAP_H: 800,
+STEP: 0.30,
+MAX_NOTCH: 3,
+BOULDER_COUNT: 6,
+BOULDER_BUCKETS: 3,
+LAYER_LEN: 10,
+CHANNEL_X: 1500,
+CHANNEL_W: 150,
+DRAIN_PER_PX: 0.0022,
+REFUEL_TIME: 10,
+CAM_LERP: 0.09,
+BG_RESPAWN_THRESHOLD: 6,
+VEL_SCALE: 180,
+MIN_CAR_DIST: 54,
+BUCKET_REACH: 26,
+};
+
+/* ============================ SFX ============================ */
+class SFX {
+constructor(){
+this.ctx=null; this.master=null; this.enabled=true;
+this.engOsc=null; this.engGain=null; this.lfo=null; this.lfoGain=null;
+this.running=false; this._started=false;
+}
+init(){
+if(this._started) return;
+const AC = window.AudioContext || window.webkitAudioContext;
+if(!AC) return;
+this.ctx = new AC();
+this.master = this.ctx.createGain();
+this.master.gain.value = 0.6;
+this.master.connect(this.ctx.destination);
+this._started = true;
+}
+resume(){ if(this.ctx && this.ctx.state==="suspended") this.ctx.resume().catch(()=>{}); }
+setEnabled(v){ this.enabled=v; if(this.master) this.master.gain.value = v?0.6:0; }
+tone(f,d,type="sine",v=0.25,when=0,f2){
+if(!this.enabled||!this.ctx) return;
+const t=this.ctx.currentTime+when;
+const o=this.ctx.createOscillator(), g=this.ctx.createGain();
+o.type=type; o.frequency.setValueAtTime(f,t);
+if(f2) o.frequency.exponentialRampToValueAtTime(Math.max(1,f2), t+d);
+g.gain.setValueAtTime(0.0001,t);
+g.gain.linearRampToValueAtTime(v,t+0.01);
+g.gain.exponentialRampToValueAtTime(0.001,t+d);
+o.connect(g); g.connect(this.master);
+o.start(t); o.stop(t+d+0.05);
+}
+startEngine(){
+if(!this.ctx||this.running) return;
+this.running=true;
+this.engGain = this.ctx.createGain();
+this.engGain.gain.value = 0.0;
+this.engGain.connect(this.master);
+
+this.engOsc = this.ctx.createOscillator();
+this.engOsc.type = "sawtooth";
+this.engOsc.frequency.value = 62;
+
+this.lfo = this.ctx.createOscillator();
+this.lfo.type = "sine";
+this.lfo.frequency.value = 8;
+this.lfoGain = this.ctx.createGain();
+this.lfoGain.gain.value = 4;
+this.lfo.connect(this.lfoGain);
+this.lfoGain.connect(this.engOsc.frequency);
+
+this.engOsc.connect(this.engGain);
+this.engOsc.start();
+this.lfo.start();
+}
+stopEngine(){
+if(!this.running) return;
+this.running=false;
+try{
+this.engOsc.stop(); this.lfo.stop();
+this.engGain.disconnect(); this.lfoGain.disconnect();
+}catch(e){}
+this.engOsc=null; this.engGain=null; this.lfo=null; this.lfoGain=null;
+}
+setEngine(speedNorm, loaded){
+if(!this.engOsc||!this.ctx) return;
+const t = this.ctx.currentTime;
+const speed = Math.min(1, Math.abs(speedNorm));
+let baseF = 55 + speed * 55;
+if(loaded) baseF *= 0.62;
+this.engOsc.frequency.setTargetAtTime(baseF, t, 0.15);
+if(this.lfo) this.lfo.frequency.setTargetAtTime(6 + speed*10, t, 0.2);
+const idle = 0.06, run = 0.16;
+const g = speed > 0.02 ? (idle + (run-idle)*speed) : idle*0.7;
+this.engGain.gain.setTargetAtTime(g, t, 0.2);
+}
+scoop(){ this.tone(140,0.15,"square",0.28,0,80); this.tone(90,0.2,"sawtooth",0.18,0.05); }
+dump(){ this.tone(180,0.22,"triangle",0.3,0,90); this.tone(90,0.3,"sine",0.22,0.1); }
+error(){ this.tone(180,0.2,"square",0.3); this.tone(180,0.2,"square",0.3,0.25); }
+levelUp(){ [523,659,784,1046].forEach((f,i)=>this.tone(f,0.15,"square",0.28,i*0.12)); }
+die(){ this.tone(220,0.3,"sawtooth",0.3,0); this.tone(150,0.4,"sawtooth",0.3,0.2); }
+respawn(){ [330,440,550].forEach((f,i)=>this.tone(f,0.12,"triangle",0.2,i*0.06)); }
+rev(){ this.tone(90,0.5,"sawtooth",0.2,0,140); }
+brake(){ this.tone(1200,0.15,"square",0.15,0,300); }
+crash(){ this.tone(80,0.25,"sawtooth",0.3,0,40); }
+}
+
+/* ============================ UTILS ============================ */
+function clamp(v,a,b){return v<a?a:v>b?b:v;}
+function dist(a,b){const dx=a.x-b.x,dy=a.y-b.y;return Math.sqrt(dx*dx+dy*dy);}
+function rand(a,b){return a+Math.random()*(b-a);}
+function normAng(a){while(a>Math.PI)a-=Math.PI*2;while(a<-Math.PI)a+=Math.PI*2;return a;}
+
+/* ============================ BOULDER ============================ */
+class Boulder {
+constructor(x,y){
+this.x=x; this.y=y;
+this.buckets=CFG.BOULDER_BUCKETS;
+this.baseR = 42;
+this.spawnT = 0;
+}
+get radius(){
+const r = this.buckets / CFG.BOULDER_BUCKETS;
+return this.baseR * (0.35 + 0.65*r) * (0.4 + 0.6*this.spawnT);
+}
+isBlocking(){ return this.buckets >= 1; }
+draw(ctx, cam, W, H){
+if(this.buckets<=0) return;
+const sp = this.w2s(cam,W,H);
+const r = this.radius * cam.zoom;
+const g = ctx.createRadialGradient(sp.x, sp.y, r*0.2, sp.x, sp.y, r);
+g.addColorStop(0,"#f0d090");
+g.addColorStop(1,"#a07030");
+ctx.fillStyle = g;
+ctx.beginPath();
+ctx.arc(sp.x, sp.y, r, 0, Math.PI*2);
+ctx.fill();
+ctx.strokeStyle="#7a5010";
+ctx.lineWidth=2*cam.zoom;
+ctx.stroke();
+ctx.fillStyle="#3a2000";
+ctx.font=`bold ${14*cam.zoom}px sans-serif`;
+ctx.textAlign="center"; ctx.textBaseline="middle";
+ctx.fillText(this.buckets+"", sp.x, sp.y);
+}
+w2s(cam,W,H){
+return { x:(this.x-cam.x)*cam.zoom+W/2, y:(this.y-cam.y)*cam.zoom+H/2 };
+}
+}
+
+/* ============================ CHANNEL ============================ */
+class Channel {
+constructor(layers){
+this.layers = layers;
+this.segLen = CFG.LAYER_LEN;
+this.state = [];
+for(let i=0;i<layers;i++){
+const arr=[]; for(let j=0;j<this.segLen;j++) arr.push(false);
+this.state.push(arr);
+}
+this.x = CFG.CHANNEL_X;
+this.width = CFG.CHANNEL_W;
+this.y0 = 100;
+this.y1 = CFG.MAP_H - 100;
+}
+totalSegments(){ return this.layers * this.segLen; }
+filledCount(){ let n=0; for(const row of this.state) for(const v of row) if(v) n++; return n; }
+currentLayer(){
+for(let i=0;i<this.layers;i++){ if(this.state[i].some(v=>!v)) return i; }
+return this.layers-1;
+}
+canFill(){ return this.filledCount()<this.totalSegments(); }
+fillOne(){
+const L = this.currentLayer();
+const row = this.state[L];
+for(let j=0;j<this.segLen;j++){ if(!row[j]){ row[j]=true; return true; } }
+return false;
+}
+_segIndexFromY(y){
+const segH = (this.y1 - this.y0) / this.segLen;
+const i = Math.floor((y - this.y0) / segH);
+return clamp(i, 0, this.segLen-1);
+}
+isBlocking(worldY){
+const idx = this._segIndexFromY(worldY);
+for(let i=0;i<this.layers;i++){ if(!this.state[i][idx]) return true; }
+return false;
+}
+draw(ctx, cam, W, H){
+const x1 = (this.x - cam.x)*cam.zoom + W/2;
+const w = this.width * cam.zoom;
+ctx.save();
+ctx.fillStyle="#0a1520";
+ctx.fillRect(x1, 0, w, H);
+const segH = (this.y1 - this.y0)/this.segLen;
+for(let i=0;i<this.layers;i++){
+const bright = 0.25 + (i/this.layers)*0.75;
+const col = `rgb(${Math.round(140*bright+60)}, ${Math.round(90*bright+40)}, ${Math.round(40*bright+20)})`;
+for(let j=0;j<this.segLen;j++){
+if(this.state[i][j]){
+const yTop = (this.y0 + j*segH)*cam.zoom + H/2 - cam.y*cam.zoom;
+const h = segH*cam.zoom;
+ctx.fillStyle=col;
+ctx.fillRect(x1, yTop, w, h);
+}
+}
+}
+ctx.strokeStyle="#d9a34a";
+ctx.lineWidth=3;
+ctx.strokeRect(x1, 0, w, H);
+ctx.restore();
+}
+}
+
+/* ============================ VEHICLE ============================ */
+class Vehicle {
+constructor(x,y,color){
+this.x=x; this.y=y;
+this.angle=0;
+this.color=color;
+this.halfW = 26;
+this.halfH = 22;
+this.notchL = 0;
+this.notchR = 0;
+this.bucketLoaded = false;
+this.trackPhase = 0;
+this.fuel = 100;
+this.refuelTimer = 0;
+this.refueling = false;
+this.delivered = 0;
+this.blockTimer = 0;
+}
+applyNotch(key){
+const K = String(key);
+if(K==="1"){ if(this.notchL < CFG.MAX_NOTCH) this.notchL++; }
+else if(K==="3"){ if(this.notchR < CFG.MAX_NOTCH) this.notchR++; }
+else if(K==="4"){ if(this.notchL > -CFG.MAX_NOTCH) this.notchL--; }
+else if(K==="6"){ if(this.notchR > -CFG.MAX_NOTCH) this.notchR--; }
+else if(K==="2"){
+if(this.notchL < CFG.MAX_NOTCH) this.notchL++;
+if(this.notchR < CFG.MAX_NOTCH) this.notchR++;
+}
+else if(K==="5"){
+if(this.notchL > -CFG.MAX_NOTCH) this.notchL--;
+if(this.notchR > -CFG.MAX_NOTCH) this.notchR--;
+}
+}
+getSpeedFactor(){ return (this.notchL + this.notchR)/2 * CFG.STEP; }
+
+// Lấy vị trí gầu (mũi xe, phía trước)
+getBucketPos(){
+const d = this.halfH + 16;
+return {
+x: this.x + Math.cos(this.angle) * d,
+y: this.y + Math.sin(this.angle) * d
+};
+}
+
+updateMotion(dt, world, boost=1, opponent=null){
+if(this.refueling){
+this.refuelTimer -= dt;
+if(this.refuelTimer<=0){ this.refueling=false; this.fuel=100; }
+return {moved:0, blocked:false};
+}
+const vL = this.notchL * CFG.STEP;
+const vR = this.notchR * CFG.STEP;
+const v = (vL + vR) / 2;
+const omega = (vL - vR) * 2.4;
+
+const SPD = CFG.VEL_SCALE * boost;
+const nx = this.x + Math.cos(this.angle) * v * SPD * dt;
+const ny = this.y + Math.sin(this.angle) * v * SPD * dt;
+
+const check = (x,y)=>{
+if(x<40||x>CFG.MAP_W-40||y<40||y>CFG.MAP_H-40) return true;
+for(const b of world.boulders){
+if(b.buckets<=0) continue;
+if(b.spawnT<0.5) continue;
+const d = Math.hypot(x-b.x,y-b.y);
+if(d < b.radius + 22) return true;
+}
+if(x > world.channel.x - 4 && x < world.channel.x + world.channel.width + 4){
+if(world.channel.isBlocking(y)) return true;
+}
+// ⚡ LỖI 10: chặn va chạm với xe kia
+if(opponent && !opponent.refueling){
+const d = Math.hypot(x-opponent.x, y-opponent.y);
+if(d < CFG.MIN_CAR_DIST) return true;
+}
+return false;
+};
+
+let finalX = this.x, finalY = this.y;
+let blocked = false;
+if(Math.abs(v) > 0.001){
+if(!check(nx, this.y)) finalX = nx;
+else blocked = true;
+if(!check(finalX, ny)) finalY = ny;
+else blocked = true;
+}
+const moved = Math.hypot(finalX-this.x, finalY-this.y);
+this.x = finalX; this.y = finalY;
+// Quay (khi có hiệu tốc 2 bánh)
+let wantRotate = Math.abs(omega) > 0.001;
+if(wantRotate){
+// nhưng kiểm tra điểm mũi/quay có bị đè không
+const testA = this.angle + omega*dt;
+const testNoseX = this.x + Math.cos(testA) * this.halfH;
+const testNoseY = this.y + Math.sin(testA) * this.halfH;
+let rotBlocked = false;
+// chỉ chặn nếu chạm xe kia
+if(opponent){
+const d = Math.hypot(testNoseX-opponent.x, testNoseY-opponent.y);
+if(d < CFG.MIN_CAR_DIST - 6) rotBlocked = true;
+}
+if(!rotBlocked) this.angle = testA;
+}
+
+if(moved>0){
+this.fuel -= moved * CFG.DRAIN_PER_PX;
+if(this.fuel <= 0 && !this.refueling){
+this.fuel = 0;
+this.refueling = true;
+this.refuelTimer = CFG.REFUEL_TIME;
+}
+}
+this.trackPhase += (vL - vR) * 6 * dt + (vL+vR) * 3 * dt;
+this.blockTimer = blocked ? this.blockTimer + dt : 0;
+return {moved, blocked};
+}
+}
+
+/* ============================ AI ============================ */
+class AIVehicle extends Vehicle {
+constructor(x,y){
+super(x,y,"#e05050");
+this.aiState = "seek";
+this.aiTarget = null;
+this.aiChanY = 150 + Math.random()*500;
+this.scoopCooldown = 0;
+this.dumpCooldown = 0;
+this.speedMul = 1;
+
+// LỖI 11: người mới tập lái
+this.hesitateTimer = 0;
+this.revTimer = 0;
+this.aimAngle = 0;
+this.wobblePhase = Math.random()*Math.PI*2;
+this.waypointAim = 0;
+this.waypointTimer = 0;
+this.avoidTimer = 0;
+this.avoidDir = 0;
+this.lastBlocked = 0;
+this.overshootAng = 0;
+this.scoopMissTimer = 0;
+this.dumpMissTimer = 0;
+this.confusedTimer = 0; // lúng túng sau va chạm
+this.stuckTimer = 0;
+}
+
+aiUpdate(dt, world, opponent){
+if(this.refueling){
+this.updateMotion(dt, world, this.speedMul, opponent);
+return;
+}
+
+// Mục tiêu
+this.bucketLoaded ? (this.aiState="toChannel") : (this.aiState="seek");
+let tx, ty;
+
+if(this.aiState==="seek"){
+let best=null, bd=Infinity;
+for(const b of world.boulders){
+if(b.buckets<=0) continue;
+if(b.spawnT<0.6) continue;
+const d = dist(this,b);
+if(d<bd){ bd=d; best=b; }
+}
+if(best){ this.aiTarget=best; tx=best.x; ty=best.y; }
+else { tx=this.x; ty=this.y; }
+} else {
+const c = world.channel;
+tx = c.x + c.width/2;
+ty = this.aiChanY;
+}
+
+const dx = tx - this.x, dy = ty - this.y;
+let targetA = Math.atan2(dy,dx);
+
+// ⚡ LỖI 11: lệch hướng tự nhiên (run tay)
+this.wobblePhase += dt * 1.6;
+const wobbleAmp = 0.13; // ±~7.5°
+targetA += Math.sin(this.wobblePhase) * wobbleAmp;
+
+// Quay quá tay ngẫu nhiên
+if(this.overshootAng !== 0){
+targetA += this.overshootAng;
+this.overshootAng *= (1 - dt*3);
+if(Math.abs(this.overshootAng) < 0.01) this.overshootAng = 0;
+}
+
+// Đang tránh xe → ưu tiên hướng tránh
+if(this.avoidTimer > 0){
+this.avoidTimer -= dt;
+targetA = this.avoidDir; // quay theo hướng tránh
+}
+// Đang lúng túng sau va chạm → chậm chạp
+if(this.confusedTimer > 0){
+this.confusedTimer -= dt;
+targetA += Math.sin(this.wobblePhase*3) * 0.35; // loạng choạng
+}
+
+// Quay mượt (chậm hơn người bình thường)
+const turnRate = this.confusedTimer>0 ? 1.2 : 1.9;
+this.angle += normAng(targetA - this.angle) * Math.min(1, turnRate*dt);
+
+// Đặt ga (mới tập lái)
+const dNow = Math.hypot(dx,dy);
+let ga = 0;
+if(this.hesitateTimer > 0){
+this.hesitateTimer -= dt;
+ga = 0; // đứng ngơ ngác
+} else if(this.confusedTimer > 0){
+ga = 1; // vẫn đi nhưng chậm
+} else if(dNow > 16){
+// ngẫu nhiên ngơ ngác đứng lại
+if(Math.random() < dt * 0.15){
+this.hesitateTimer = rand(0.5, 1.5);
+// đôi khi rú ga để nghe "người mới"
+if(Math.random()<0.5) this.sfx_rev_hint = true;
+} else {
+ga = Math.random() < 0.35 ? 1 : 2; // chủ yếu nấc 1-2
+}
+} else {
+ga = 0;
+}
+
+// Nếu đang tránh (do va chạm) → lùi trước
+if(this.avoidTimer > 0){
+// 0.3s đầu lùi, sau đó tiến theo hướng tránh
+if(this.avoidTimer > (this.avoidTotal - 0.3)){
+this.notchL = -2; this.notchR = -2;
+} else {
+this.notchL = 1; this.notchR = 1;
+}
+} else {
+this.notchL = ga; this.notchR = ga;
+}
+// Đôi khi quay 1 bánh để xoay tại chỗ
+if(this.confusedTimer > 0 && Math.random() < dt*2){
+this.notchL = 1; this.notchR = -1;
+}
+
+const res = this.updateMotion(dt, world, this.speedMul, opponent);
+
+// Phát hiện bị chặn → tránh
+if(res.blocked && Math.abs(this.notchL)+Math.abs(this.notchR) > 0){
+this.lastBlocked += dt;
+if(this.lastBlocked > 0.4 && this.avoidTimer <= 0){
+this.lastBlocked = 0;
+// Xác định bên đối diện → tránh
+let sideDir = 0;
+if(opponent){
+const relAng = normAng(Math.atan2(opponent.y-this.y, opponent.x-this.x) - this.angle);
+sideDir = relAng > 0 ? -1 : 1; // quay ngược phía đối phương
+} else {
+sideDir = Math.random() < 0.5 ? -1 : 1;
+}
+this.avoidDir = this.angle + sideDir * (Math.PI*0.55);
+this.avoidTotal = 0.85;
+this.avoidTimer = this.avoidTotal;
+this.confusedTimer = 1.5;
+if(this.sfx) this.sfx(brake) ; // placeholder, dùng qua game
+}
+} else {
+this.lastBlocked = Math.max(0, this.lastBlocked - dt);
+}
+
+// Kẹt cứng > 4s → đổi mục tiêu
+if(res.blocked && Math.abs(this.notchL)+Math.abs(this.notchR) > 0){
+this.stuckTimer += dt;
+} else {
+this.stuckTimer = Math.max(0, this.stuckTimer - dt*2);
+}
+if(this.stuckTimer > 4){
+this.stuckTimer = 0;
+if(this.bucketLoaded){ this.aiChanY = 150 + Math.random()*500; }
+else { this.aiTarget = null; }
+this.confusedTimer = 1.0;
+}
+
+// LỖI 11: khi tới gần boulder, 25% khả năng đâm hụt → phải lùi lại
+if(this.aiState==="seek" && this.aiTarget && this.aiTarget.buckets>0){
+const b = this.aiTarget;
+const bucket = this.getBucketPos();
+const dBucket = Math.hypot(bucket.x - b.x, bucket.y - b.y);
+if(dBucket < b.radius + CFG.BUCKET_REACH){
+if(this.scoopMissTimer > 0){
+this.scoopMissTimer -= dt;
+} else if(!this._scoopMissChecked){
+this._scoopMissChecked = true;
+if(Math.random() < 0.18){
+// đâm hụt → lùi lại 1 chút
+this.scoopMissTimer = 0.7;
+this.notchL = -2; this.notchR = -2;
+} else {
+// múc thành công
+this.aiTarget.buckets--;
+this.bucketLoaded = true;
+this.aiTarget = null;
+this.aiChanY = 150 + Math.random()*500;
+this.aiState = "toChannel";
+this.scoopCooldown = this.speedMul < 0.7 ? 1.2 : 0.5;
+this._scoopMissChecked = false;
+}
+}
+} else if(dBucket > b.radius + 60){
+this._scoopMissChecked = false;
+}
+}
+
+// Nhả cát — đôi khi lố kênh phải lùi lại
+if(this.aiState==="toChannel" && this.bucketLoaded){
+const c = world.channel;
+const inX = this.x > c.x - 40 && this.x < c.x + c.width + 40;
+if(inX && c.canFill()){
+if(this.dumpMissTimer > 0){
+this.dumpMissTimer -= dt;
+this.notchL = -2; this.notchR = -2;
+} else if(!this._dumpChecked){
+this._dumpChecked = true;
+if(Math.random() < 0.15){
+// nhả hụt → lùi lại thử lại
+this.dumpMissTimer = 0.6;
+} else {
+c.fillOne();
+this.bucketLoaded = false;
+this.delivered++;
+this.aiChanY = 150 + Math.random()*500;
+this.aiState = "seek";
+this.dumpCooldown = this.speedMul < 0.7 ? 1.0 : 0.4;
+this._dumpChecked = false;
+}
+}
+} else if(!inX){
+this._dumpChecked = false;
+}
+}
+if(this.scoopCooldown>0) this.scoopCooldown -= dt;
+if(this.dumpCooldown>0) this.dumpCooldown -= dt;
+}
+}
+
+/* ============================ GAME ============================ */
+class Game {
+constructor(canvas, minimap){
+this.cvs=canvas;
+this.ctx=canvas.getContext("2d");
+this.mm=minimap;
+this.mmCtx=minimap.getContext("2d");
+this.W=0; this.H=0;
+this.dpr=window.devicePixelRatio||1;
+this.sfx = new SFX();
+this.cam = {x:700,y:400,zoom:1};
+this.world = null;
+this.player = null;
+this.ai = null;
+this.state = {running:false, over:false};
+this.level = 1;
+this.speedBonus = 0;
+this.startTime = 0;
+this._lastTs = 0;
+this._aiSlowNotified = false;
+this._respawning = false;
+this._aiBrakeCd = 0;
+
+this._bindResize();
+this._loop = this._loop.bind(this);
+}
+_bindResize(){
+const rz = ()=>{
+this.W=window.innerWidth; this.H=window.innerHeight;
+this.cvs.width = this.W*this.dpr;
+this.cvs.height = this.H*this.dpr;
+this.cvs.style.width = this.W+"px";
+this.cvs.style.height = this.H+"px";
+this.ctx.setTransform(this.dpr,0,0,this.dpr,0,0);
+};
+rz();
+window.addEventListener("resize", rz);
+}
+
+startLevel(level){
+this.level = level;
+this.speedBonus = (level-1)*0.20;
+const layers = 5 + (level-1)*5;
+const channel = new Channel(layers);
+
+this.world = { boulders: [], channel };
+for(let i=0;i<CFG.BOULDER_COUNT;i++){
+const x = 100 + i*180 + rand(-20,20);
+const y = 150 + Math.random()*(CFG.MAP_H-300);
+const b = new Boulder(x,y);
+b.spawnT = 1;
+this.world.boulders.push(b);
+}
+this.player = new Vehicle(300, 400, "#e0a040");
+this.player.delivered = 0;
+this.ai = new AIVehicle(200, 400);
+
+this.cam.x = 300; this.cam.y = 400; this.cam.zoom = 1.15;
+this.state.running=true; this.state.over=false;
+this.startTime = performance.now();
+this._aiSlowNotified = false;
+this._respawning = false;
+this._aiBrakeCd = 0;
+
+this.sfx.startEngine();
+document.getElementById("overlay").style.display = "none";
+this.updateHUD();
+}
+
+endLevel(){
+this.state.over=true; this.state.running=false;
+this.sfx.stopEngine();
+const pDelivered = this.player.delivered||0;
+const aDelivered = this.ai.delivered||0;
+const win = pDelivered > aDelivered;
+const ov = document.getElementById("overlay");
+if(win){
+this.sfx.levelUp();
+ov.innerHTML = `
+<h2 style="color:#7cf07c">🏆 THẮNG!</h2>
+<p>Bạn: <b>${pDelivered}</b> gầu · AI: <b>${aDelivered}</b> gầu</p>
+<p>Lên <b>Level ${this.level+1}</b> — xe mạnh hơn <b>+${this.level*20}%</b>, kênh +5 lớp</p>
+<button id="nextBtn">▶️ CHƠI TIẾP</button>
+`;
+ov.style.display="flex";
+setTimeout(()=>{const b=document.getElementById("nextBtn"); if(b) b.onclick=()=>this.startLevel(this.level+1);},30);
+} else {
+this.sfx.die();
+ov.innerHTML = `
+<h2 style="color:#f44">💥 THUA</h2>
+<p>Bạn: <b>${pDelivered}</b> gầu · AI: <b>${aDelivered}</b> gầu</p>
+<p>Quay về <b>Level 1</b></p>
+<button id="retryBtn">🔄 CHƠI LẠI</button>
+`;
+ov.style.display="flex";
+setTimeout(()=>{const b=document.getElementById("retryBtn"); if(b) b.onclick=()=>this.startLevel(1);},30);
+}
+}
+
+_loop(ts){
+if(!this._lastTs) this._lastTs=ts;
+const dt = Math.min((ts-this._lastTs)/1000, 0.05);
+this._lastTs=ts;
+if(this.state.running && !this.state.over) this.update(dt);
+if(this.world){
+for(const b of this.world.boulders){
+if(b.spawnT<1) b.spawnT = Math.min(1, b.spawnT + dt*1.4);
+}
+}
+this.draw();
+requestAnimationFrame(this._loop);
+}
+run(){ requestAnimationFrame(this._loop); }
+
+update(dt){
+if(!this.player||!this.ai) return;
+const boost = 1 + this.speedBonus;
+const c = this.world.channel;
+const total = c.totalSegments();
+const filled = c.filledCount();
+const aiRatio = this.ai.delivered / total;
+
+// LỖI 7: AI mệt
+if(aiRatio >= 0.40 && aiRatio < 0.50){
+this.ai.speedMul = 0.5;
+if(!this._aiSlowNotified){
+this._aiSlowNotified = true;
+this._showMsg("😴 AI đã mệt, chạy chậm lại!", 2.2);
+}
+} else {
+this.ai.speedMul = 1;
+if(this._aiSlowNotified && aiRatio >= 0.50){
+this._aiSlowNotified = false;
+this._showMsg("⚡ AI đã hồi sức!", 2.0);
+}
+}
+
+// Player
+this.player.updateMotion(dt, this.world, boost, this.ai);
+// AI
+this.ai.aiUpdate(dt, this.world, this.player);
+
+// Audio: rú/phanh cho AI khi confused (throttle)
+if(this.ai.confusedTimer > 1.3 && this._aiBrakeCd<=0){
+this.sfx.brake();
+this._aiBrakeCd = 1.5;
+}
+if(this._aiBrakeCd>0) this._aiBrakeCd -= dt;
+// Đôi khi AI rồ ga
+if(this.ai.hesitateTimer > 0 && Math.random() < dt*1.5){
+this.sfx.rev();
+}
+// Crash sound khi 2 xe quá gần
+const dCar = Math.hypot(this.player.x-this.ai.x, this.player.y-this.ai.y);
+if(dCar < CFG.MIN_CAR_DIST + 4 && this._crashCd<=0){
+this.sfx.crash();
+this._crashCd = 0.6;
+}
+if(this._crashCd>0) this._crashCd -= dt;
+
+// ✅ LỖI 9: PLAYER múc — chỉ khi GẦU chạm (không tính lùi)
+if(!this.player.bucketLoaded){
+const bucket = this.player.getBucketPos();
+for(const b of this.world.boulders){
+if(b.buckets<=0) continue;
+if(b.spawnT<0.6) continue;
+const d = Math.hypot(bucket.x-b.x, bucket.y-b.y);
+if(d < b.radius + CFG.BUCKET_REACH){
+b.buckets--;
+this.player.bucketLoaded = true;
+this.sfx.scoop();
+this._showMsg("🪣 Múc 1 gầu cát!", 1.0);
+break;
+}
+}
+}
+
+// LỖI 6: respawn cát
+let totalRem = 0;
+for(const b of this.world.boulders) totalRem += b.buckets;
+const needed = total - filled;
+if(totalRem < CFG.BG_RESPAWN_THRESHOLD && needed > 0 && !this._respawning){
+this._respawning = true;
+const spawnCount = Math.max(2, Math.ceil((needed + 6) / 3));
+this.respawnSand(spawnCount);
+setTimeout(()=>{ this._respawning = false; }, 800);
+}
+
+// Camera
+this.cam.x += (this.player.x - this.cam.x)*CFG.CAM_LERP;
+this.cam.y += (this.player.y - this.cam.y)*CFG.CAM_LERP;
+
+// SFX động cơ
+const spd = this.player.getSpeedFactor();
+this.sfx.setEngine(spd, this.player.bucketLoaded);
+
+if(!c.canFill()){ this.endLevel(); return; }
+this.updateHUD();
+}
+
+respawnSand(count){
+for(let i=0;i<count;i++){
+let attempts=0, ok=false, x, y;
+while(attempts<30 && !ok){
+attempts++;
+x = rand(60, 400);
+y = rand(120, CFG.MAP_H-120);
+ok = true;
+if(this.player && Math.hypot(x-this.player.x,y-this.player.y) < 120) ok=false;
+if(this.ai && Math.hypot(x-this.ai.x,y-this.ai.y) < 120) ok=false;
+for(const b of this.world.boulders){
+if(b.buckets<=0) continue;
+if(Math.hypot(x-b.x,y-b.y) < 140) { ok=false; break; }
+}
+}
+if(ok){
+const b = new Boulder(x,y);
+b.spawnT = 0;
+this.world.boulders.push(b);
+}
+}
+this.sfx.respawn();
+this._showMsg("⛏️ Đống cát mới xuất hiện bên trái!", 2.0);
+}
+
+tryDump(){
+const p=this.player;
+if(!p||!p.bucketLoaded){ this.sfx.error(); this._showMsg("Gầu trống!", 1.0); return; }
+const c = this.world.channel;
+if(p.x > c.x - 50 && p.x < c.x + c.width + 50){
+if(c.canFill()){
+c.fillOne();
+p.bucketLoaded = false;
+p.delivered++;
+this.sfx.dump();
+this._showMsg("🏗️ Đã lấp 1 gầu!", 1.0);
+} else { this.sfx.error(); this._showMsg("Kênh đã đầy!", 1.5); }
+} else { this.sfx.error(); this._showMsg("Phải đứng gần kênh!", 1.5); }
+}
+
+updateHUD(){
+const p=this.player, a=this.ai;
+if(!p) return;
+const c=this.world.channel;
+const filled = c.filledCount();
+const total = c.totalSegments();
+document.getElementById("fillBadge").innerHTML = `${filled}<span class="total">/${total}</span>`;
+document.getElementById("levelTxt").innerText = "LEVEL "+this.level;
+document.getElementById("aiTxt").innerText = "AI: "+a.delivered;
+const el = (performance.now()-this.startTime)/1000;
+const m = Math.floor(el/60), s=Math.floor(el%60);
+document.getElementById("timeTxt").innerText = (m<10?"0":"")+m+":"+(s<10?"0":"")+s;
+const f = Math.max(0, Math.floor(p.fuel));
+document.getElementById("fuelTxt").innerText = f+"%";
+const fill = document.getElementById("fuelBarFill");
+fill.style.width = f+"%";
+fill.classList.toggle("low", f<25);
+}
+
+_showMsg(t,sec){
+const el=document.getElementById("msg");
+el.innerText=t; el.className="show";
+clearTimeout(this._mt);
+this._mt = setTimeout(()=>{el.className="";},(sec||2)*1000);
+}
+
+w2s(wx,wy){
+return { x:(wx-this.cam.x)*this.cam.zoom+this.W/2, y:(wy-this.cam.y)*this.cam.zoom+this.H/2 };
+}
+
+draw(){
+const ctx=this.ctx;
+const g = ctx.createLinearGradient(0,0,0,this.H);
+g.addColorStop(0,"#3a2e18"); g.addColorStop(1,"#1a1508");
+ctx.fillStyle=g; ctx.fillRect(0,0,this.W,this.H);
+if(!this.world){ this.drawMinimap(); return; }
+
+ctx.strokeStyle="rgba(255,200,120,0.06)";
+ctx.lineWidth=1;
+const gs=80;
+const sx = ((-this.cam.x*this.cam.zoom + this.W/2) % (gs*this.cam.zoom));
+const sy = ((-this.cam.y*this.cam.zoom + this.H/2) % (gs*this.cam.zoom));
+for(let x=sx;x<this.W;x+=gs*this.cam.zoom){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,this.H); ctx.stroke(); }
+for(let y=sy;y<this.H;y+=gs*this.cam.zoom){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(this.W,y); ctx.stroke(); }
+
+this.world.channel.draw(ctx, this.cam, this.W, this.H);
+for(const b of this.world.boulders) b.draw(ctx, this.cam, this.W, this.H);
+
+this.drawVehicle(this.ai, true);
+this.drawVehicle(this.player, false);
+this.drawMinimap();
+}
+
+drawVehicle(v, isAI){
+const ctx=this.ctx;
+const sp=this.w2s(v.x, v.y);
+const z=this.cam.zoom;
+ctx.save();
+ctx.translate(sp.x, sp.y);
+ctx.rotate(v.angle);
+const bw = v.halfH*2*z;
+const bh = v.halfW*2*z;
+
+// Bánh xích
+ctx.fillStyle = v.bucketLoaded ? "#4a4030" : "#333";
+ctx.fillRect(-bw/2, -bh/2-4*z, bw, 12*z);
+ctx.fillRect(-bw/2, bh/2-8*z, bw, 12*z);
+
+// Mắt xích
+ctx.strokeStyle = "#666";
+ctx.lineWidth = 1.5*z;
+for(let t=-6;t<12;t++){
+const px = -bw/2 + ((t*18 + v.trackPhase*20) % bw + bw) % bw;
+ctx.beginPath();
+ctx.moveTo(px, -bh/2-4*z); ctx.lineTo(px, -bh/2+8*z);
+ctx.moveTo(px, bh/2-8*z); ctx.lineTo(px, bh/2+4*z);
+ctx.stroke();
+}
+
+// Thân
+ctx.fillStyle = v.color;
+ctx.fillRect(-bw/2+6*z, -bh/2+8*z, bw-12*z, bh-16*z);
+ctx.strokeStyle = "#222";
+ctx.lineWidth = 2*z;
+ctx.strokeRect(-bw/2+6*z, -bh/2+8*z, bw-12*z, bh-16*z);
+
+// Buồng lái
+ctx.fillStyle = isAI ? "#802020" : "#906018";
+ctx.fillRect(-bw/2+14*z, -bh/4, bw-28*z, bh/2);
+
+// Gầu
+const bucketColor = v.bucketLoaded ? "#f0d080" : "#5a5040";
+ctx.fillStyle = bucketColor;
+ctx.fillRect(bw/2-4*z, -bh/3, 14*z, bh*2/3);
+ctx.strokeStyle="#3a2a10";
+ctx.lineWidth=2*z;
+ctx.strokeRect(bw/2-4*z, -bh/3, 14*z, bh*2/3);
+
+if(v.bucketLoaded){
+ctx.fillStyle="#f5d878";
+ctx.beginPath();
+ctx.arc(bw/2+3*z, 0, 7*z, 0, Math.PI*2);
+ctx.fill();
+ctx.strokeStyle="#a07020";
+ctx.lineWidth=1.5*z;
+ctx.stroke();
+}
+ctx.restore();
+
+if(isAI){
+const label = "AI ▲ " + v.delivered;
+ctx.font = `bold ${Math.max(12, 14*z)}px sans-serif`;
+ctx.textAlign="center";
+ctx.lineWidth=3; ctx.strokeStyle="#000";
+ctx.strokeText(label, sp.x, sp.y - 55*z);
+ctx.fillStyle="#ff8888";
+ctx.fillText(label, sp.x, sp.y - 55*z);
+}
+}
+
+drawMinimap(){
+const c=this.mmCtx;
+c.clearRect(0,0,this.mm.width,this.mm.height);
+if(!this.world) return;
+const sx = this.mm.width / CFG.MAP_W;
+const sy = this.mm.height / CFG.MAP_H;
+c.fillStyle="#4a3010";
+c.fillRect(this.world.channel.x*sx, 0, this.world.channel.width*sx, this.mm.height);
+for(const b of this.world.boulders){
+if(b.buckets<=0) continue;
+c.fillStyle="#f0c860";
+c.beginPath();
+c.arc(b.x*sx, b.y*sy, Math.max(2, b.radius*sx), 0, Math.PI*2);
+c.fill();
+}
+if(this.ai){ c.fillStyle="#ff5555"; c.beginPath(); c.arc(this.ai.x*sx, this.ai.y*sy, 3, 0, Math.PI*2); c.fill(); }
+if(this.player){
+c.fillStyle="#ffd700";
+c.beginPath(); c.arc(this.player.x*sx, this.player.y*sy, 3.5, 0, Math.PI*2); c.fill();
+c.strokeStyle="#fff"; c.lineWidth=1; c.stroke();
+}
+}
+}
+
+/* ============================ BOOT ============================ */
+const game = new Game(
+document.getElementById("game"),
+document.getElementById("minimap")
+);
+window._game = game;
+
+document.getElementById("startBtn").onclick = () => {
+document.getElementById("overlay").style.display = "none";
+document.getElementById("stickL").classList.add("show");
+document.getElementById("dumpBtn").classList.add("show");
+document.getElementById("minimap").classList.add("show");
+document.getElementById("fuelWrap").classList.add("show");
+document.getElementById("menuBtn").classList.add("show");
+document.getElementById("soundBtn").classList.add("show");
+game.sfx.init();
+game.sfx.resume();
+game.startLevel(1);
+game.run();
+};
+
+/* Joystick */
+function bindKeyBtn(container){
+container.querySelectorAll(".cellBtn").forEach(btn=>{
+const k = btn.dataset.key;
+const trigger = (e)=>{
+e.preventDefault();
+if(!game.player) return;
+game.player.applyNotch(k);
+btn.classList.add("tapped");
+setTimeout(()=>btn.classList.remove("tapped"), 120);
+game.sfx.tone(380, 0.03, "square", 0.08);
+};
+btn.addEventListener("touchstart", trigger, {passive:false});
+btn.addEventListener("mousedown", trigger);
+});
+}
+bindKeyBtn(document.getElementById("stickL"));
+
+const dumpBtn = document.getElementById("dumpBtn");
+const onDump = (e)=>{ e && e.preventDefault(); if(game.player) game.tryDump(); };
+dumpBtn.addEventListener("touchstart", onDump, {passive:false});
+dumpBtn.addEventListener("mousedown", onDump);
+
+window.addEventListener("keydown", (e)=>{
+if(!game.player) return;
+const k = e.key;
+if(["1","2","3","4","5","6"].includes(k)){
+game.player.applyNotch(k);
+game.sfx.tone(380, 0.03, "square", 0.08);
+}
+if(k===" "){ e.preventDefault(); game.tryDump(); }
+});
+
+const sndBtn = document.getElementById("soundBtn");
+sndBtn.onclick = () => {
+const on = sndBtn.innerText==="🔊";
+sndBtn.innerText = on?"🔇":"🔊";
+game.sfx.setEnabled(!on);
+};
+
+document.getElementById("menuBtn").onclick = () => {
+document.getElementById("bottomLinks").classList.add("show");
+};
+document.getElementById("closeMenu").onclick = () => {
+document.getElementById("bottomLinks").classList.remove("show");
+};
+
+["touchstart","mousedown","click"].forEach(evt=>{
+window.addEventListener(evt, () => {
+game.sfx.init();
+game.sfx.resume();
+}, {once:true});
+});
+</script>
+</body>
+</html>

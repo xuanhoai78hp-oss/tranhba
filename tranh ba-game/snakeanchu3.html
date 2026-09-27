@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>🐍 Word Snake - Tiếng Việt</title>
+<style>
+body{background:#1a1a2e;color:#fff;font-family:Arial;text-align:center;margin:0;padding:10px;touch-action:none}
+h1{font-size:22px;margin:5px 0}
+#game{background:#16213e;margin:10px auto;border:2px solid #00d9ff;display:block;border-radius:10px}
+#score{font-size:16px;color:#00d9ff;margin:5px}
+#level{font-size:14px;color:#ff6b6b;margin:2px}
+#word{font-size:22px;min-height:30px;color:#ffd700;margin:5px;font-weight:bold;letter-spacing:2px}
+#msg{font-size:14px;min-height:20px;margin:5px}
+.good{color:#0f0}
+.bad{color:#f00}
+.rare{color:#ff0}
+.paused{color:#ff0;font-weight:bold}
+.nest{color:#9b59b6}
+.gate{color:#e74c3c;font-weight:bold}
+#soundBtn{background:#333;color:#fff;border:1px solid #00d9ff;border-radius:5px;padding:6px 12px;font-size:13px;cursor:pointer;margin-left:8px}
+</style>
+</head>
+<body>
+<h1>🐍 Rắn Săn Từ - Tiếng Việt</h1>
+<div id="level">Level: 1</div>
+<div id="score">Score: 0</div>
+<div id="word">Ă</div>
+<div id="msg">Bấm START để chơi! | Space = Tạm dừng</div>
+<canvas id="game" width="320" height="320"></canvas>
+<div style="margin-top:8px">
+<button id="start" onclick="start()" style="background:#00d9ff;color:#000;padding:12px 25px;font-size:16px;border:none;border-radius:5px;cursor:pointer">▶ START</button>
+<button id="soundBtn" onclick="toggleSound()">🔊 Âm thanh: BẬT</button>
+</div>
+<script>
+/* =============================
+🔊 HỆ THỐNG ÂM THANH
+============================= */
+var audioCtx = null;
+var soundEnabled = true;
+
+function initAudio(){
+if(!audioCtx){
+try{ audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+catch(e){ console.warn('Web Audio API không được hỗ trợ'); }
+}
+if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function playTone(freq, duration, type, volume, delay){
+if(!soundEnabled) return;
+initAudio();
+if(!audioCtx) return;
+type = type || 'sine'; volume = volume || 0.15; delay = delay || 0;
+var startTime = audioCtx.currentTime + delay;
+var osc = audioCtx.createOscillator();
+var gain = audioCtx.createGain();
+osc.type = type;
+osc.frequency.setValueAtTime(freq, startTime);
+gain.gain.setValueAtTime(0, startTime);
+gain.gain.linearRampToValueAtTime(volume, startTime + 0.01);
+gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+osc.connect(gain); gain.connect(audioCtx.destination);
+osc.start(startTime); osc.stop(startTime + duration + 0.02);
+}
+
+function playMelody(notes){
+if(!soundEnabled) return;
+initAudio();
+if(!audioCtx) return;
+var t = 0;
+for(var i = 0; i < notes.length; i++){
+var n = notes[i];
+playTone(n.f, n.d, n.t || 'sine', n.v || 0.15, t);
+t += n.d * 0.85;
+}
+}
+function sfxEat(){ playTone(880,0.08,'square',0.12); playTone(1320,0.08,'square',0.10,0.05); }
+function sfxGood(){ playMelody([{f:659,d:0.09,t:'square',v:0.13},{f:784,d:0.09,t:'square',v:0.13},{f:1047,d:0.15,t:'square',v:0.15}]); }
+function sfxRare(){ playMelody([{f:659,d:0.08,t:'square',v:0.13},{f:784,d:0.08,t:'square',v:0.13},{f:1047,d:0.08,t:'square',v:0.14},{f:1319,d:0.08,t:'square',v:0.14},{f:1568,d:0.22,t:'square',v:0.16}]); }
+function sfxBad(){ playMelody([{f:220,d:0.18,t:'sawtooth',v:0.15},{f:180,d:0.25,t:'sawtooth',v:0.15}]); }
+function sfxNest(){ playMelody([{f:523,d:0.10,t:'triangle',v:0.12},{f:392,d:0.14,t:'triangle',v:0.12}]); }
+function sfxGate(){ playMelody([{f:523,d:0.10,t:'square',v:0.13},{f:659,d:0.10,t:'square',v:0.13},{f:784,d:0.10,t:'square',v:0.14},{f:1047,d:0.10,t:'square',v:0.15},{f:1319,d:0.28,t:'square',v:0.16}]); }
+function sfxPause(){ playTone(440,0.12,'sine',0.15); }
+function sfxStart(){ playMelody([{f:392,d:0.10,t:'square',v:0.13},{f:523,d:0.10,t:'square',v:0.13},{f:659,d:0.20,t:'square',v:0.15}]); }
+
+function toggleSound(){
+soundEnabled = !soundEnabled;
+var btn = document.getElementById('soundBtn');
+btn.innerText = soundEnabled ? '🔊 Âm thanh: BẬT' : '🔇 Âm thanh: TẮT';
+if(soundEnabled) sfxEat();
+}
+
+/* =============================
+🇻🇳 KHO TỪ TIẾNG VIỆT
+============================= */
+var vnWords2 = ['AN','AO','BA','BE','BO','BU','CA','CO','DA','DE','DI','DO','DU','EM','GO','HA','HE','HI',
+'HO','LA','LE','LO','MA','ME','MI','MO','MU','NA','NE','NI','NO','NU','PI','RA','RE','RI','RU',
+'SA','SE','SI','SO','SU','TA','TE','TI','TO','TU','VA','VE','VI','VO','VU','XA','XE','XI','XO','XU',
+'AI','AM','BI','ĐI','ĐO','ĐU','ĐA','ĐE','ĐÊ','ĐƠ',
+'ĂN','ÂM','ÂN','ÊM','ÔI','ÔM','ÔN','ƠI','ƠN','ƯA','ƯU',
+'BÊ','DÊ','HÊ','KÊ','LÊ','MÊ','RÊ','TÊ','VÊ','XÊ',
+'BÔ','CÔ','DÔ','ĐÔ','GÔ','HÔ','LÔ','MÔ','NÔ','PÔ','RÔ','SÔ','TÔ','VÔ','XÔ',
+'BƠ','CƠ','DƠ','LƠ','MƠ','NƠ','SƠ','TƠ','VƠ','XƠ',
+'CƯ','DƯ','HƯ','LƯ','NƯ','SƯ','TƯ','XƯ'
+];
+var vnWords3 = ['TRÀ','CÀ','MƯA','NẮNG','GIÓ','MÂY','TRỜI','ĐẤT','NƯỚC','LỬA','MẮT','TAI','MŨI','MIỆNG','CHÂN','TAY','ĐẦU','CỔ','BỤNG','LƯNG'];
+var vnWords4 = ['TRƯỜNG','HỌC','SINH','GIÁO','VIÊN','BẠN','BÈ','THẦY','CÔ','SÁCH','VỞ','BÚT','BẢNG','PHẤN','LỚP','BÀI','MÔN','TOÁN','VĂN','ANH'];
+var vnWords5 = ['HẠNH','PHÚC','TÌNH','YÊU','GIA','ĐÌNH','BẠN','THÂN','MÁI','TRƯỜNG','THẦY','CÔ','NGHỀ','NGHIỆP','ƯỚC','MƠ','TƯƠNG','LAI','SÁNG','TẠO'];
+var vnWords6 = ['HỌC','SINH','GIÁO','DỤC','CỘNG','ĐỒNG','PHÁT','TRIỂN','THÀNH','CÔNG','NỖ','LỰC','CỐ','GẮNG','KIÊN','TRÌ','NHẪN','NẠI','TỰ','TIN','VUI','VẺ'];
+var vnWords7 = ['PHƯƠNG','HƯỚNG','NGHIỆP','CHUYỂN','BIẾN','THAY','ĐỔI','SÁNG','TẠO','TIẾN','BỘ','PHÁT','TRIỂN','TRUYỀN','THỐNG','GIỮ','GÌN'];
+var allVnWords = [...vnWords2, ...vnWords3, ...vnWords4, ...vnWords5, ...vnWords6, ...vnWords7];
+
+// Chuẩn hoá Unicode để so sánh chính xác tiếng Việt
+function normalize(s){ return s.normalize('NFC').toUpperCase(); }
+var allWordsNormalized = allVnWords.map(normalize);
+
+// Tra cứu nhanh bằng Set
+var allWordsSet = new Set(allWordsNormalized);
+
+// Bộ ký tự có dấu (dùng để rải mồi)
+var VN_CONSONANTS = 'BCDFGHJKLMNPQRSTVWXĐ';
+var VN_VOWELS = 'AĂÂEÊIOÔƠUƯY';
+var VN_ALL = VN_CONSONANTS + VN_VOWELS;
+
+/* =============================
+🎮 LOGIC GAME (kiểu cũ)
+============================= */
+var cvs = document.getElementById('game');
+var ctx = cvs.getContext('2d');
+var s = 20, sz = cvs.width / s;
+var x, y, xv, yv, tail, len, game, score = 0;
+var currentWord = '';
+var foods = [];
+var paused = false;
+var level = 1;
+var baseSpeed = 300;
+var speed = 300;
+var nest = { x: 1, y: 1 };
+var gate = null;
+
+// Kiểm tra tiền tố có thể tạo thành từ không
+function canFormWord(word){
+var w = normalize(word);
+if(w.length < 2) return true;
+for(var i = 2; i <= w.length; i++){
+var prefix = w.substring(0, i);
+for(var j = 0; j < allWordsNormalized.length; j++){
+if(allWordsNormalized[j].startsWith(prefix)) return true;
+}
+}
+return false;
+}
+
+function start(){
+initAudio();
+sfxStart();
+currentWord = VN_CONSONANTS[Math.floor(Math.random() * VN_CONSONANTS.length)];
+x = Math.floor(sz / 2); y = Math.floor(sz / 2);
+xv = 0; yv = 0; tail = []; len = 1;
+score = 0; level = 1; paused = false;
+speed = baseSpeed;
+gate = null;
+spawnFoods(5);
+updateUI();
+document.getElementById('start').style.display = 'none';
+document.getElementById('msg').innerText = 'Mũi tên/Swipe | Space=Pause | Click mồi | Về 🏠 để reset từ';
+if(game) clearInterval(game);
+game = setInterval(update, speed);
+}
+
+function spawnFoods(count){
+foods = [];
+for(var i = 0; i < count; i++){
+var fx, fy, overlap;
+do{
+fx = Math.floor(Math.random() * sz);
+fy = Math.floor(Math.random() * sz);
+overlap = false;
+for(var f of foods){ if(f.x == fx && f.y == fy) overlap = true; }
+if(fx == nest.x && fy == nest.y) overlap = true;
+if(gate && fx == gate.x && fy == gate.y) overlap = true;
+}while(overlap);
+// 70% chọn nguyên âm (có dấu) để dễ ghép từ
+var pool = Math.random() < 0.7 ? VN_VOWELS : VN_ALL;
+var fc = pool[Math.floor(Math.random() * pool.length)];
+foods.push({ x: fx, y: fy, c: fc });
+}
+}
+
+function updateUI(){
+document.getElementById('score').innerText = 'Score: ' + score;
+document.getElementById('level').innerText = 'Level: ' + level;
+document.getElementById('word').innerText = currentWord;
+}
+
+function checkWord(){
+var msg = document.getElementById('msg');
+var w = normalize(currentWord);
+var isGood = allWordsSet.has(w);
+
+if(isGood){
+var mult = w.length;
+var pts = mult * 10;
+score += pts;
+var oldWord = currentWord;
+currentWord = VN_CONSONANTS[Math.floor(Math.random() * VN_CONSONANTS.length)];
+var emoji = mult >= 5 ? '🔥' : '⭐';
+msg.innerText = emoji + ' ' + oldWord + '! +' + pts + ' điểm!';
+msg.className = mult >= 5 ? 'rare' : 'good';
+if(mult >= 5){ sfxRare(); } else { sfxGood(); }
+checkGate();
+}else{
+if(!canFormWord(currentWord)){
+msg.innerText = '⚠️ Không tạo được từ! Về 🏠 để reset!';
+msg.className = 'nest';
+}else{
+msg.innerText = '...';
+msg.className = '';
+}
+}
+updateUI();
+}
+
+function checkGate(){
+var msg = document.getElementById('msg');
+if(level == 1 && score >= 100){
+level = 2;
+speed = Math.floor(baseSpeed * 0.8);
+gate = { x: sz - 2, y: sz - 2, target: 2 };
+msg.innerText = '🚪 CỬA 2! Qua cửa để lên Level 2!';
+msg.className = 'gate';
+sfxGate();
+if(game) clearInterval(game);
+game = setInterval(update, speed);
+}else if(level == 2 && score >= 200){
+level = 3;
+speed = Math.floor(speed * 0.8);
+gate = { x: sz - 2, y: sz - 2, target: 3 };
+msg.innerText = '🚪 CỬA 3! Qua cửa để lên Level 3!';
+msg.className = 'gate';
+sfxGate();
+if(game) clearInterval(game);
+game = setInterval(update, speed);
+}else if(level >= 3 && score >= level * 300){
+level++;
+speed = Math.floor(speed * 0.8);
+gate = { x: sz - 2, y: sz - 2, target: level };
+msg.innerText = '🚪 CỬA ' + level + '! Qua cửa để lên Level ' + level + '!';
+msg.className = 'gate';
+sfxGate();
+if(game) clearInterval(game);
+game = setInterval(update, speed);
+}
+}
+
+function update(){
+if(paused) return;
+if(xv == 0 && yv == 0) return;
+x += xv; y += yv;
+if(x < 0) x = sz - 1;
+if(x >= sz) x = 0;
+if(y < 0) y = sz - 1;
+if(y >= sz) y = 0;
+
+if(x == nest.x && y == nest.y){
+currentWord = VN_CONSONANTS[Math.floor(Math.random() * VN_CONSONANTS.length)];
+var msg = document.getElementById('msg');
+msg.innerText = '🏠 Về ổ! Từ mới: ' + currentWord;
+msg.className = 'nest';
+sfxNest();
+updateUI();
+}
+
+if(gate && x == gate.x && y == gate.y){
+level = gate.target;
+var msg = document.getElementById('msg');
+msg.innerText = '🎉 Đã qua Cửa ' + level + '! Level ' + level;
+msg.className = 'gate';
+sfxGate();
+gate = null;
+x = Math.floor(sz / 2); y = Math.floor(sz / 2);
+xv = 0; yv = 0;
+spawnFoods(5);
+updateUI();
+return;
+}
+
+// Vẽ nền
+ctx.fillStyle = '#16213e';
+ctx.fillRect(0, 0, cvs.width, cvs.height);
+ctx.strokeStyle = '#1a2a4e';
+ctx.lineWidth = 0.5;
+for(var i = 0; i < sz; i++){
+ctx.beginPath(); ctx.moveTo(i * s, 0); ctx.lineTo(i * s, cvs.height); ctx.stroke();
+ctx.beginPath(); ctx.moveTo(0, i * s); ctx.lineTo(cvs.width, i * s); ctx.stroke();
+}
+
+// Vẽ ổ nhà
+ctx.fillStyle = '#9b59b6';
+ctx.beginPath();
+ctx.arc(nest.x * s + s / 2, nest.y * s + s / 2, s / 2 - 2, 0, Math.PI * 2);
+ctx.fill();
+ctx.font = 'bold 14px "Segoe UI", Arial, sans-serif';
+ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+ctx.fillStyle = '#fff';
+ctx.fillText('🏠', nest.x * s + s / 2, nest.y * s + s / 2);
+
+// Vẽ cổng
+if(gate){
+ctx.fillStyle = '#e74c3c';
+ctx.fillRect(gate.x * s + 2, gate.y * s + 2, s - 4, s - 4);
+ctx.fillStyle = '#fff';
+ctx.fillText('🚪', gate.x * s + s / 2, gate.y * s + s / 2);
+}
+
+// Vẽ rắn
+ctx.fillStyle = score < 0 ? '#f00' : '#00d9ff';
+for(var i = 0; i < tail.length; i++){
+var t = tail[i];
+ctx.fillRect(t.x * s + 1, t.y * s + 1, s - 2, s - 2);
+}
+tail.push({ x: x, y: y });
+while(tail.length > len) tail.shift();
+
+// Vẽ mồi (chữ có dấu)
+ctx.font = 'bold 16px "Segoe UI", Arial, sans-serif';
+for(var i = 0; i < foods.length; i++){
+var f = foods[i];
+ctx.fillStyle = i === 0 ? '#ffd700' : i < 3 ? '#ffaa00' : '#888';
+ctx.fillText(f.c, f.x * s + s / 2, f.y * s + s / 2);
+}
+
+// Kiểm tra ăn mồi
+for(var i = 0; i < foods.length; i++){
+if(x == foods[i].x && y == foods[i].y){
+currentWord += foods[i].c;
+len++;
+foods.splice(i, 1);
+sfxEat();
+
+// Sinh mồi mới
+var fx, fy, overlap;
+do{
+fx = Math.floor(Math.random() * sz);
+fy = Math.floor(Math.random() * sz);
+overlap = false;
+for(var f of foods){ if(f.x == fx && f.y == fy) overlap = true; }
+if(fx == nest.x && fy == nest.y) overlap = true;
+if(gate && fx == gate.x && fy == gate.y) overlap = true;
+if(x == fx && y == fy) overlap = true;
+}while(overlap);
+var pool = Math.random() < 0.7 ? VN_VOWELS : VN_ALL;
+var fc = pool[Math.floor(Math.random() * pool.length)];
+foods.push({ x: fx, y: fy, c: fc });
+
+checkWord();
+break;
+}
+}
+}
+
+function togglePause(){
+paused = !paused;
+var msg = document.getElementById('msg');
+if(paused){
+msg.innerText = '⏸️ TẠM DỪNG - Bấm Space để tiếp tục';
+msg.className = 'paused';
+}else{
+msg.innerText = 'Tiếp tục chơi!';
+msg.className = '';
+}
+sfxPause();
+}
+
+document.addEventListener('keydown', function(e){
+if(e.key == ' '){ e.preventDefault(); togglePause(); }
+if(paused) return;
+if(e.key == 'w' && yv != 1){ xv = 0; yv = -1; }
+if(e.key == 's' && yv != -1){ xv = 0; yv = 1; }
+if(e.key == 'a' && xv != 1){ xv = -1; yv = 0; }
+if(e.key == 'd' && xv != -1){ xv = 1; yv = 0; }
+});
+
+var bx, by;
+cvs.addEventListener('touchstart', function(e){
+bx = e.touches[0].clientX;
+by = e.touches[0].clientY;
+});
+cvs.addEventListener('touchend', function(e){
+var ex = e.changedTouches[0].clientX;
+var ey = e.changedTouches[0].clientY;
+var dx = ex - bx, dy = ey - by;
+if(paused) return;
+if(Math.abs(dx) > Math.abs(dy)){
+if(dx > 0 && xv != -1){ xv = 1; yv = 0; }
+if(dx < 0 && xv != 1){ xv = -1; yv = 0; }
+}else{
+if(dy > 0 && yv != -1){ xv = 0; yv = 1; }
+if(dy < 0 && yv != 1){ xv = 0; yv = -1; }
+}
+});
+
+cvs.addEventListener('click', function(e){
+if(paused) return;
+var rect = cvs.getBoundingClientRect();
+var cx = e.clientX - rect.left;
+var cy = e.clientY - rect.top;
+var gx = Math.floor(cx / s);
+var gy = Math.floor(cy / s);
+for(var i = 0; i < foods.length; i++){
+if(foods[i].x == gx && foods[i].y == gy){
+if(gx > x){ xv = 1; yv = 0; }
+else if(gx < x){ xv = -1; yv = 0; }
+else if(gy > y){ xv = 0; yv = 1; }
+else if(gy < y){ xv = 0; yv = -1; }
+return;
+}
+}
+});
+</script>
+</body>
+</html>

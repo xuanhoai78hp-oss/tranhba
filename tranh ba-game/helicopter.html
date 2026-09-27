@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Helicopter Bảo Vệ Đảo</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; user-select:none; -webkit-tap-highlight-color:transparent; }
+html, body { width:100%; height:100%; overflow:hidden; background:#000; font-family:Arial,sans-serif; }
+#game { display:block; width:100%; height:100%; touch-action:none; }
+
+#hud {
+position:fixed; top:0; left:0; width:100%; padding:8px 12px;
+display:flex; justify-content:space-between; align-items:flex-start;
+color:#fff; font-size:13px; pointer-events:none; text-shadow:1px 1px 2px #000;
+z-index:10;
+}
+#hud .level { font-size:15px; font-weight:bold; color:#ffe94d; }
+#hud .score { font-size:15px; font-weight:bold; color:#7CFC00; }
+
+#guide {
+position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+color:#fff; font-size:16px; font-weight:bold; text-align:center;
+text-shadow:0 0 8px #000, 0 0 4px #000; pointer-events:none;
+width:90%; line-height:1.5; z-index:11;
+}
+
+#bigmsg {
+position:fixed; top:38%; left:50%; transform:translate(-50%,-50%);
+color:#ffe94d; font-size:24px; font-weight:bold; text-align:center;
+text-shadow:0 0 10px #000, 0 0 6px #000; pointer-events:none;
+width:90%; line-height:1.4; z-index:12; white-space:pre-line;
+}
+
+.pad { position:fixed; bottom:18px; z-index:20; }
+#padLeft { left:16px; width:150px; height:150px; }
+
+.btn {
+position:absolute; display:flex; align-items:center; justify-content:center;
+border-radius:12px; font-weight:bold; color:#fff; font-size:18px;
+background:rgba(255,255,255,0.15); border:2px solid rgba(255,255,255,0.5);
+backdrop-filter:blur(2px); touch-action:none; cursor:pointer;
+}
+.btn:active, .btn.active { background:rgba(255,233,77,0.55); border-color:#ffe94d; }
+
+#btnW { top:0; left:50px; width:50px; height:50px; }
+#btnA { top:50px; left:0; width:50px; height:50px; }
+#btnS { top:50px; left:50px; width:50px; height:50px; }
+#btnD { top:50px; left:100px; width:50px; height:50px; }
+
+#btnFire {
+position:fixed; right:16px; bottom:18px; width:110px; height:110px;
+border-radius:50%; font-size:20px; font-weight:bold; color:#fff;
+background:rgba(255,60,60,0.35); border:3px solid rgba(255,80,80,0.9);
+display:flex; align-items:center; justify-content:center;
+touch-action:none; z-index:20; cursor:pointer;
+text-shadow:1px 1px 2px #000;
+}
+#btnFire:active, #btnFire.active { background:rgba(255,60,60,0.75); }
+
+#overlay {
+position:fixed; inset:0; background:rgba(0,0,0,0.82);
+display:flex; flex-direction:column; align-items:center; justify-content:center;
+color:#fff; text-align:center; padding:24px; z-index:50;
+}
+#overlay h1 { font-size:26px; color:#ffe94d; margin-bottom:14px; }
+#overlay p { font-size:15px; line-height:1.7; margin-bottom:8px; max-width:420px; }
+#overlay button {
+margin-top:20px; padding:14px 34px; font-size:18px; font-weight:bold;
+border:none; border-radius:12px; background:#28a745; color:#fff; cursor:pointer;
+}
+#overlay button:active { background:#1e7e34; }
+css
+#overlay button:active { background:#1e7e34; }
+
+/* ===== NÚT HOME ===== */
+#btnHome {
+position: fixed !important;
+top: 12px;
+right: 75px;
+width: 75px;
+height: 50px;
+border-radius: 50%;
+background: rgba(255, 60, 60, 0.85);
+border: 2px solid #fff;
+color: #fff;
+font-size: 22px;
+line-height: 1;
+display: flex;
+align-items: center;
+justify-content: center;
+cursor: pointer;
+z-index: 9999;
+text-decoration: none;
+box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+user-select: none;
+-webkit-tap-highlight-color: transparent;
+font-family: Arial, sans-serif;
+}
+#btnHome:hover {
+background: rgba(255, 233, 77, 0.95);
+transform: scale(1.08);
+}
+#btnHome:active {
+transform: scale(0.95);
+}
+</style>
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<!-- ===== NÚT HOME ===== -->
+<a id="btnHome" href="index.html" title="Về trang chủ">🏠</a>
+<div id="hud">
+<div class="left">
+<div class="level">MÀN: <span id="levelTxt">1</span></div>
+</div>
+<div class="right">
+<div class="score">ĐIỂM: <span id="scoreTxt">0</span></div>
+</div>
+</div>
+
+<div id="guide"></div>
+<div id="bigmsg"></div>
+
+<div class="pad" id="padLeft">
+<div class="btn" id="btnW">W</div>
+<div class="btn" id="btnA">A</div>
+<div class="btn" id="btnS">S</div>
+<div class="btn" id="btnD">D</div>
+</div>
+
+<div id="btnFire">FIRE</div>
+
+<div id="overlay">
+<h1>🚁 HELICOPTER BẢO VỆ ĐẢO</h1>
+<p>Bạn là phi công trực thăng bảo vệ hòn đảo.</p>
+<p>Bàn phím: <b>W/S</b> tăng/giảm tốc · <b>A/D</b> quay · <b>SPACE</b> bắn/cất cánh</p>
+<p>Điện thoại: dùng phím ảo góc trái + nút FIRE góc phải</p>
+<p style="color:#ffe94d; margin-top:10px;">Mỗi màn qua được +20 điểm, hạ hết mục tiêu +100.</p>
+<p style="color:#ff6b6b;">Trúng đạn −1. Điểm âm → thua.</p>
+<button id="startBtn">BẮT ĐẦU</button>
+</div>
+
+<script>
+'use strict';
+
+/* ================= CẤU HÌNH ================= */
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+let W = 0, H = 0, DPR = Math.min(window.devicePixelRatio || 1, 2);
+
+function resize() {
+W = window.innerWidth;
+H = window.innerHeight;
+canvas.width = W * DPR;
+canvas.height = H * DPR;
+canvas.style.width = W + 'px';
+canvas.style.height = H + 'px';
+ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+/* ================= BIẾN TOÀN CỤC ================= */
+let shake = 0;
+let fighting = false;
+let helicopter = null;
+let enemies = [];
+let bullets = [];
+let eBullets = [];
+let particles = [];
+let boss = null;
+
+const MAX_ENEMIES = 8;
+const FIRE_COOLDOWN = 0.18;
+let fireTimer = 0;
+
+const WAVE_THRESHOLDS = [0, 1, 3, 6, 10];
+const WAVE_SIZES = [1, 2, 3, 4, 5];
+
+/* ================= ÂM THANH ================= */
+let audioCtx = null;
+function initAudio() {
+if (!audioCtx) {
+try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+}
+if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+}
+function beep(freq, dur, type, vol) {
+type = type || 'square';
+vol = vol || 0.06;
+if (!audioCtx) return;
+const o = audioCtx.createOscillator();
+const g = audioCtx.createGain();
+o.type = type;
+o.frequency.value = freq;
+o.connect(g); g.connect(audioCtx.destination);
+const t = audioCtx.currentTime;
+g.gain.setValueAtTime(vol, t);
+g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+o.start(t);
+o.stop(t + dur);
+}
+
+let bgTimer = null;
+let bgStep = 0;
+const BG_PATTERN = [880, 880, 880, 660, 660];
+
+function startBgMusic() {
+stopBgMusic();
+bgStep = 0;
+scheduleBg();
+}
+function scheduleBg() {
+if (!state.running || state.over) return;
+const speedFactor = Math.max(0.45, 1 - (state.level - 1) * 0.12);
+const base = fighting ? 0.16 : 0.34;
+const interval = base * speedFactor * 1000;
+const freq = BG_PATTERN[bgStep % BG_PATTERN.length];
+const boost = fighting ? 1.35 : 1.0;
+beep(freq * boost, 0.09, 'square', 0.045);
+bgStep++;
+bgTimer = setTimeout(scheduleBg, interval);
+}
+function stopBgMusic() {
+if (bgTimer) { clearTimeout(bgTimer); bgTimer = null; }
+}
+
+/* ================= TRẠNG THÁI GAME ================= */
+const state = {
+running: false,
+over: false,
+level: 1,
+score: 0,
+killsTotal: 0,
+waveIdx: 0,
+waveDone: false,
+landingTimer: 0,
+msgTimer: 0,
+msg: '',
+phase: 'intro',
+phaseTimer: 0,
+pendingNextLevel: false,
+flowStarted: false, // FIX: đánh dấu đã bắt đầu flow màn chiến đấu
+};
+
+/* ================= ĐẢO ================= */
+let island = { x:0, y:0, r:110 };
+function setupIsland() {
+island.r = Math.max(80, Math.min(W, H) * 0.16);
+island.x = island.r * 0.85;
+island.y = island.r * 0.85;
+}
+
+/* ================= TRỰC THĂNG ================= */
+function makeHelicopter() {
+return {
+x: W / 2,
+y: H + 80,
+angle: -Math.PI / 2,
+speed: 0.5,
+size: Math.max(16, Math.min(W, H) * 0.032),
+landed: false,
+};
+}
+
+/* ================= TẠO MỤC TIÊU ================= */
+function makeEnemy(opts) {
+opts = opts || {};
+const size = Math.max(14, Math.min(W, H) * 0.028);
+const startX = opts.x !== undefined ? opts.x : W + 50;
+const startY = opts.y !== undefined ? opts.y : H * 0.78;
+const a = Math.atan2(island.y - startY, island.x - startX);
+return {
+x: startX, y: startY,
+angle: a,
+speed: 0.5,
+size: size,
+alive: true,
+erratic: !!opts.erratic,
+erraticTimer: 0,
+shootCooldown: opts.shoot ? (1.2 + Math.random() * 0.8) : 0,
+canShoot: !!opts.shoot,
+hitFlash: 0,
+passed: false,
+escapeCount: 0,
+};
+}
+
+function spawnEnemy(opts) {
+if (enemies.length >= MAX_ENEMIES) return null;
+const e = makeEnemy(opts);
+enemies.push(e);
+return e;
+}
+
+/* Spawn không giới hạn — dùng khi mở đợt mới để chắc chắn đủ số lượng */
+function spawnWaveForce(n, shoot, erratic) {
+for (let i = 0; i < n; i++) {
+setTimeout(function() {
+if (state.over) return; // FIX: chỉ chặn khi game over
+const e = makeEnemy({
+x: W + 50 + i * 80,
+y: H * (0.65 + Math.random() * 0.25),
+erratic: !!erratic,
+shoot: !!shoot,
+});
+enemies.push(e);
+}, i * 400);
+}
+}
+
+function enemyWorldSpeed() {
+return Math.max(40, Math.min(W, H) * 0.11) * 0.5;
+}
+
+/* ================= BOSS ================= */
+function makeBoss() {
+return {
+x: W * 0.5,
+y: H * 0.22,
+size: Math.max(60, Math.min(W, H) * 0.11),
+hp: 100,
+maxHp: 100,
+hitFlash: 0,
+dirX: 1,
+lastThreshold: 100,
+};
+}
+
+function spawnBossMinion() {
+spawnEnemy({
+x: boss.x,
+y: boss.y,
+erratic: true,
+shoot: true,
+});
+showMsg('⚠️ Boss thả mục tiêu!', 1.2);
+}
+
+/* ================= BẮN ================= */
+function fireBullet() {
+if (!helicopter || helicopter.landed) return;
+if (fireTimer > 0) return;
+fireTimer = FIRE_COOLDOWN;
+
+const b = helicopter.size * 0.5 + 6;
+const bx = helicopter.x + Math.cos(helicopter.angle) * b;
+const by = helicopter.y + Math.sin(helicopter.angle) * b;
+bullets.push({
+x: bx, y: by,
+vx: Math.cos(helicopter.angle) * 780,
+vy: Math.sin(helicopter.angle) * 780,
+life: 1.6,
+r: 3,
+});
+beep(1200, 0.06, 'sawtooth', 0.05);
+}
+
+/* ================= VÒNG LẶP ================= */
+let last = 0;
+function loop(ts) {
+if (!last) last = ts;
+let dt = (ts - last) / 1000;
+last = ts;
+if (dt > 0.05) dt = 0.05;
+
+update(dt);
+render();
+requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+/* ================= UPDATE ================= */
+function update(dt) {
+if (!state.running) return;
+if (fireTimer > 0) fireTimer -= dt;
+
+/* ---- TRỰC THĂNG ---- */
+if (helicopter) {
+const h = helicopter;
+
+if (!h.landed) {
+if (input.left) h.angle -= 2.0 * dt;
+if (input.right) h.angle += 2.0 * dt;
+
+let spd = Math.max(-0.5, Math.min(1.0, h.speed));
+const worldSpeed = Math.max(70, Math.min(W, H) * 0.18) * spd;
+h.x += Math.cos(h.angle) * worldSpeed * dt;
+h.y += Math.sin(h.angle) * worldSpeed * dt;
+
+h.x = Math.max(h.size, Math.min(W - h.size, h.x));
+h.y = Math.max(h.size, Math.min(H + 60, h.y));
+}
+
+/* ---- CẤT CÁNH (FIX chính) ---- */
+if (h.landed && input.firePressed) {
+h.landed = false;
+h.speed = 0.5;
+input.firePressed = false;
+beep(700, 0.15, 'triangle', 0.08);
+
+// Bắt đầu flow chiến đấu bất kể phase, miễn là chưa start lần nào
+if (state.level >= 2 && !state.flowStarted) {
+state.flowStarted = true;
+startLevelFlow();
+}
+}
+}
+
+/* ---- PHASE INTRO ---- */
+if (state.phase === 'intro') {
+state.phaseTimer -= dt;
+if (state.phaseTimer <= 0) {
+state.phase = 'playing';
+}
+}
+
+/* ---- LOGIC MÀN ---- */
+if (state.level === 1 && state.phase === 'playing') updateLevel1(dt);
+if (state.level >= 2) updateBattleLevels(dt);
+
+/* ---- ĐẠN ---- */
+for (let i = bullets.length - 1; i >= 0; i--) {
+const b = bullets[i];
+b.x += b.vx * dt;
+b.y += b.vy * dt;
+b.life -= dt;
+if (b.life <= 0 || b.x < -50 || b.x > W + 50 || b.y < -50 || b.y > H + 50) bullets.splice(i, 1);
+}
+for (let i = eBullets.length - 1; i >= 0; i--) {
+const b = eBullets[i];
+b.x += b.vx * dt;
+b.y += b.vy * dt;
+b.life -= dt;
+if (b.life <= 0 || b.x < -50 || b.x > W + 50 || b.y < -50 || b.y > H + 50) eBullets.splice(i, 1);
+}
+
+/* ---- ĐẠN TA ↔ ĐỊCH ---- */
+for (let i = enemies.length - 1; i >= 0; i--) {
+const e = enemies[i];
+if (!e.alive) continue;
+for (let j = bullets.length - 1; j >= 0; j--) {
+const b = bullets[j];
+if (Math.hypot(b.x - e.x, b.y - e.y) < e.size + b.r) {
+enemyHit(e);
+bullets.splice(j, 1);
+break;
+}
+}
+}
+
+/* ---- ĐẠN TA ↔ BOSS ---- */
+if (boss) {
+for (let j = bullets.length - 1; j >= 0; j--) {
+const b = bullets[j];
+if (Math.hypot(b.x - boss.x, b.y - boss.y) < boss.size * 0.8 + b.r) {
+boss.hp -= 5;
+boss.hitFlash = 0.12;
+burst(b.x, b.y, '#ffdd55', 6);
+bullets.splice(j, 1);
+beep(300, 0.05, 'square', 0.05);
+
+if (boss.hp <= boss.lastThreshold - 20 && boss.hp > 0) {
+boss.lastThreshold -= 20;
+spawnBossMinion();
+}
+if (boss.hp <= 0) { boss.hp = 0; winGame(); return; }
+break;
+}
+}
+}
+
+/* ---- ĐẠN ĐỊCH ↔ TA ---- */
+if (helicopter && !helicopter.landed) {
+for (let i = eBullets.length - 1; i >= 0; i--) {
+const b = eBullets[i];
+if (Math.hypot(b.x - helicopter.x, b.y - helicopter.y) < helicopter.size + b.r) {
+eBullets.splice(i, 1);
+state.score -= 1;
+updateHud();
+burst(b.x, b.y, '#ff4444', 6);
+beep(140, 0.12, 'sawtooth', 0.08);
+shake = 0.18;
+if (state.score < 0) { gameOver(); return; }
+}
+}
+}
+
+/* ---- HẠT HIỆU ỨNG ---- */
+for (let i = particles.length - 1; i >= 0; i--) {
+const p = particles[i];
+p.x += p.vx * dt;
+p.y += p.vy * dt;
+p.vx *= 0.96;
+p.vy *= 0.96;
+p.life -= dt;
+if (p.life <= 0) particles.splice(i, 1);
+}
+
+/* ---- THÔNG BÁO ---- */
+if (state.msgTimer > 0) {
+state.msgTimer -= dt;
+if (state.msgTimer <= 0) hideMsg();
+}
+
+if (shake > 0) shake -= dt;
+updateFighting();
+}
+
+/* ---- MÀN 1 ---- */
+function updateLevel1(dt) {
+if (!helicopter) return;
+const h = helicopter;
+
+const dist = Math.hypot(h.x - island.x, h.y - island.y);
+const inIsland = dist < island.r * 0.75;
+
+if (inIsland) {
+const spd = Math.max(70, Math.min(W,H)*0.18) * Math.abs(h.speed);
+if (spd < 5) {
+state.landingTimer += dt;
+const left = Math.max(0, 5 - state.landingTimer);
+showGuide('🟢 Giữ nguyên vị trí... hạ cánh sau ' + left.toFixed(1) + 's');
+} else {
+state.landingTimer = Math.max(0, state.landingTimer - dt * 2);
+showGuide('⚠️ Nhấn S để giảm tốc (đứng yên trong đảo)');
+}
+if (state.landingTimer >= 5) landSuccess();
+} else {
+state.landingTimer = Math.max(0, state.landingTimer - dt * 2);
+showGuide('🎯 Bay vào khu vực màu vàng (đảo góc trên trái)');
+}
+}
+
+function landSuccess() {
+if (state.pendingNextLevel) return;
+state.pendingNextLevel = true;
+hideGuide();
+helicopter.landed = true;
+helicopter.speed = 0;
+state.score += 20;
+updateHud();
+showMsg('✅ Hạ cánh thành công! +20 điểm', 3);
+beep(880, 0.2, 'sine', 0.1);
+setTimeout(function(){ beep(1320, 0.25, 'sine', 0.1); }, 200);
+
+setTimeout(function() {
+state.level = 2;
+state.landingTimer = 0;
+state.pendingNextLevel = false;
+startLevelIntro();
+}, 1800);
+}
+
+/* ---- BẮT ĐẦU FLOW CHIẾN ĐẤU (màn 2+) ---- */
+function startLevelFlow() {
+if (state.level === 2) {
+state.killsTotal = 0;
+state.waveIdx = 0;
+spawnWaveForce(1, false, false);
+showMsg('🎯 Bắn hạ 5 mục tiêu!', 2.5);
+}
+else if (state.level === 3 || state.level === 4) {
+state.killsTotal = 0;
+state.waveIdx = 0;
+spawnWaveForce(WAVE_SIZES[0], state.level === 4, true);
+showMsg('🎯 Hạ đợt 1: ' + WAVE_SIZES[0] + ' mục tiêu', 2.5);
+}
+else if (state.level === 5) {
+boss = makeBoss();
+showMsg('👹 BOSS XUẤT HIỆN!', 2.5);
+}
+}
+
+/* ---- MÀN 2,3,4,5 ---- */
+function updateBattleLevels(dt) {
+if (!helicopter) return;
+
+/* --- MỤC TIÊU BAY --- */
+const sp = enemyWorldSpeed();
+for (let i = enemies.length - 1; i >= 0; i--) {
+const e = enemies[i];
+
+if (!e.passed) {
+const a = Math.atan2(island.y - e.y, island.x - e.x);
+e.angle = a;
+e.x += Math.cos(a) * sp * dt;
+e.y += Math.sin(a) * sp * dt;
+if (Math.hypot(e.x - island.x, e.y - island.y) < island.r * 0.6) e.passed = true;
+} else {
+e.angle = Math.PI / 2;
+e.x += Math.cos(e.angle) * sp * dt;
+e.y += Math.sin(e.angle) * sp * dt;
+if (e.y > H + 60) {
+e.escapeCount = (e.escapeCount || 0) + 1;
+if (e.escapeCount >= 3) {
+enemies.splice(i, 1);
+state.killsTotal++;
+updateHud();
+continue;
+}
+e.x = W + 50;
+e.y = H * 0.78;
+e.passed = false;
+}
+}
+
+if (e.erratic) {
+e.erraticTimer -= dt;
+if (e.erraticTimer <= 0) {
+e.erraticTimer = 0.6 + Math.random() * 0.8;
+e.angle += (Math.random() - 0.5) * 0.9;
+}
+}
+
+if (e.canShoot && (state.level === 4 || state.level === 5)) {
+e.shootCooldown -= dt;
+if (e.shootCooldown <= 0) {
+const progress = Math.min(1, state.killsTotal / 15);
+const missChance = 0.8 * (1 - progress);
+e.shootCooldown = Math.max(0.6, 1.8 - progress * 1.2);
+
+var tx = helicopter.x, ty = helicopter.y;
+if (Math.random() < missChance) {
+tx += (Math.random() - 0.5) * 260;
+ty += (Math.random() - 0.5) * 260;
+}
+const a2 = Math.atan2(ty - e.y, tx - e.x);
+eBullets.push({
+x: e.x, y: e.y,
+vx: Math.cos(a2) * 380,
+vy: Math.sin(a2) * 380,
+life: 1.2,
+r: 3,
+});
+beep(420, 0.05, 'sawtooth', 0.03);
+}
+}
+}
+
+if (state.level === 5 && boss) updateBoss(dt);
+
+/* --- ĐIỀU KIỆN QUA MÀN 2,3,4 --- */
+if (state.level !== 5 && state.phase === 'playing' && state.flowStarted && !state.waveDone) {
+const target = (state.level === 2) ? 5 : 15;
+if (state.killsTotal >= target && enemies.length === 0) {
+state.waveDone = true;
+passLevel();
+}
+}
+}
+
+function updateBoss(dt) {
+if (!boss) return;
+boss.hitFlash = Math.max(0, boss.hitFlash - dt);
+boss.x += boss.dirX * 60 * dt;
+if (boss.x > W - boss.size) { boss.x = W - boss.size; boss.dirX = -1; }
+if (boss.x < boss.size) { boss.x = boss.size; boss.dirX = 1; }
+boss.y = H * 0.22 + Math.sin(performance.now() / 900) * 25;
+}
+
+/* ---- HẠ MỤC TIÊU ---- */
+function enemyHit(e) {
+e.alive = false;
+burst(e.x, e.y, '#ff8800', 12);
+beep(660, 0.08, 'square', 0.06);
+setTimeout(function(){ beep(440, 0.1, 'square', 0.05); }, 50);
+
+const idx = enemies.indexOf(e);
+if (idx >= 0) enemies.splice(idx, 1);
+
+state.killsTotal++;
+state.score += 5;
+updateHud();
+
+if (state.level === 2) {
+if (state.killsTotal < 5) spawnWaveForce(1, false, false);
+} else if (state.level === 3 || state.level === 4) {
+const nextIdx = state.waveIdx + 1;
+if (nextIdx < WAVE_SIZES.length && state.killsTotal === WAVE_THRESHOLDS[nextIdx]) {
+state.waveIdx = nextIdx;
+spawnWaveForce(WAVE_SIZES[nextIdx], state.level === 4, true);
+showMsg('🎯 Đợt ' + (nextIdx + 1) + ': hạ ' + WAVE_SIZES[nextIdx] + ' mục tiêu', 1.5);
+}
+}
+}
+
+/* ---- QUA MÀN ---- */
+function passLevel() {
+if (state.pendingNextLevel) return;
+state.pendingNextLevel = true;
+state.phase = 'cleared';
+hideGuide();
+state.score += 100 + 20;
+updateHud();
+showMsg('🎉 QUA MÀN ' + state.level + '! +120 điểm', 3);
+beep(880, 0.18, 'sine', 0.1);
+setTimeout(function(){ beep(1046, 0.18, 'sine', 0.1); }, 180);
+setTimeout(function(){ beep(1318, 0.30, 'sine', 0.1); }, 360);
+
+setTimeout(function() {
+state.level++;
+state.pendingNextLevel = false;
+boss = null;
+enemies = [];
+bullets = [];
+eBullets = [];
+startLevelIntro();
+}, 2200);
+}
+
+/* ---- BẮT ĐẦU MÀN ---- */
+function startLevelIntro() {
+state.phase = 'intro';
+state.phaseTimer = 1.2;
+state.killsTotal = 0;
+state.waveIdx = 0;
+state.waveDone = false;
+state.landingTimer = 0;
+state.flowStarted = false; // FIX: reset cờ flow
+hideGuide();
+hideMsg();
+enemies = [];
+bullets = [];
+eBullets = [];
+updateHud();
+
+if (state.level === 1) {
+helicopter = makeHelicopter();
+helicopter.landed = false;
+showMsg('MÀN 1: TẬP BAY\nHạ cánh xuống đảo', 2.5);
+} else {
+helicopter = makeHelicopter();
+helicopter.x = island.x;
+helicopter.y = island.y;
+helicopter.angle = -Math.PI / 2;
+helicopter.speed = 0;
+helicopter.landed = true;
+
+if (state.level === 2) showMsg('MÀN 2: TẬP BẮN\nNhấn FIRE để cất cánh', 2.5);
+if (state.level === 3) showMsg('MÀN 3: MỤC TIÊU DI ĐỘNG\nNhấn FIRE để cất cánh', 2.5);
+if (state.level === 4) showMsg('MÀN 4: CHIẾN ĐẤU\nĐịch bắn trả — cẩn thận!', 2.5);
+if (state.level === 5) showMsg('MÀN 5: HẠ BOSS\nNhấn FIRE để cất cánh', 2.5);
+}
+}
+
+/* ================= RENDER ================= */
+function render() {
+ctx.save();
+if (shake > 0) {
+const s = shake * 20;
+ctx.translate((Math.random() - 0.5) * s, (Math.random() - 0.5) * s);
+}
+
+const g = ctx.createLinearGradient(0, 0, 0, H);
+g.addColorStop(0, '#1a4a7a');
+g.addColorStop(0.5, '#2e7fc1');
+g.addColorStop(1, '#0d2b4a');
+ctx.fillStyle = g;
+ctx.fillRect(-20, -20, W + 40, H + 40);
+
+ctx.save();
+ctx.globalAlpha = 0.08;
+ctx.strokeStyle = '#fff';
+ctx.lineWidth = 1;
+for (let y = 0; y < H; y += 40) {
+ctx.beginPath();
+for (let x = 0; x < W; x += 20) {
+const yy = y + Math.sin((x + performance.now() / 20) / 60) * 4;
+if (x === 0) ctx.moveTo(x, yy); else ctx.lineTo(x, yy);
+}
+ctx.stroke();
+}
+ctx.restore();
+
+drawIsland();
+
+ctx.save();
+ctx.shadowColor = '#ffe94d';
+ctx.shadowBlur = 8;
+ctx.fillStyle = '#ffe94d';
+for (const b of bullets) {
+ctx.beginPath();
+ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+ctx.fill();
+}
+ctx.restore();
+
+ctx.save();
+ctx.shadowColor = '#ff4444';
+ctx.shadowBlur = 8;
+ctx.fillStyle = '#ff6666';
+for (const b of eBullets) {
+ctx.beginPath();
+ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+ctx.fill();
+}
+ctx.restore();
+
+for (const e of enemies) drawEnemy(e);
+if (boss) drawBoss(boss);
+if (helicopter) drawHelicopter(helicopter);
+
+for (const p of particles) {
+ctx.save();
+ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+ctx.fillStyle = p.color;
+ctx.beginPath();
+ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+ctx.fill();
+ctx.restore();
+}
+
+ctx.restore();
+}
+
+function drawIsland() {
+ctx.save();
+const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 400);
+ctx.beginPath();
+ctx.arc(island.x, island.y, island.r, 0, Math.PI * 2);
+ctx.fillStyle = 'rgba(255, 233, 77, 0.08)';
+ctx.fill();
+ctx.lineWidth = 2 + pulse;
+ctx.strokeStyle = 'rgba(255, 233, 77, 0.6)';
+ctx.stroke();
+ctx.restore();
+
+ctx.save();
+ctx.beginPath();
+ctx.arc(island.x, island.y, island.r * 0.7, 0, Math.PI * 2);
+const ig = ctx.createRadialGradient(island.x, island.y, 4, island.x, island.y, island.r * 0.7);
+ig.addColorStop(0, '#f5deb3');
+ig.addColorStop(1, '#c2a25a');
+ctx.fillStyle = ig;
+ctx.fill();
+
+ctx.fillStyle = '#2e8b57';
+ctx.beginPath();
+ctx.arc(island.x + island.r * 0.12, island.y - island.r * 0.1, island.r * 0.16, 0, Math.PI * 2);
+ctx.fill();
+ctx.beginPath();
+ctx.arc(island.x - island.r * 0.15, island.y + island.r * 0.08, island.r * 0.12, 0, Math.PI * 2);
+ctx.fill();
+ctx.restore();
+}
+
+function drawHelicopter(h) {
+ctx.save();
+ctx.translate(h.x, h.y);
+ctx.rotate(h.angle + Math.PI / 2);
+const s = h.size;
+
+const rotorA = performance.now() / 30;
+ctx.save();
+ctx.rotate(rotorA);
+ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+ctx.lineWidth = 2;
+ctx.beginPath();
+ctx.moveTo(-s * 1.2, 0); ctx.lineTo(s * 1.2, 0);
+ctx.moveTo(0, -s * 1.2); ctx.lineTo(0, s * 1.2);
+ctx.stroke();
+ctx.restore();
+
+ctx.fillStyle = h.landed ? '#2ecc71' : '#e6e6e6';
+ctx.strokeStyle = '#333';
+ctx.lineWidth = 2;
+ctx.beginPath();
+ctx.ellipse(0, 0, s * 0.55, s * 0.95, 0, 0, Math.PI * 2);
+ctx.fill(); ctx.stroke();
+
+ctx.fillStyle = '#4aa3ff';
+ctx.beginPath();
+ctx.ellipse(0, -s * 0.3, s * 0.4, s * 0.35, 0, 0, Math.PI * 2);
+ctx.fill(); ctx.stroke();
+
+ctx.fillStyle = '#ccc';
+ctx.beginPath();
+ctx.rect(-s * 0.12, s * 0.7, s * 0.24, s * 0.6);
+ctx.fill(); ctx.stroke();
+
+ctx.save();
+ctx.translate(0, s * 1.25);
+const tailA = performance.now() / 15;
+ctx.rotate(tailA);
+ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+ctx.lineWidth = 1.5;
+ctx.beginPath();
+ctx.moveTo(-s * 0.3, 0); ctx.lineTo(s * 0.3, 0);
+ctx.stroke();
+ctx.restore();
+
+ctx.restore();
+}
+
+function drawEnemy(e) {
+ctx.save();
+ctx.translate(e.x, e.y);
+ctx.rotate(e.angle);
+const s = e.size;
+
+ctx.fillStyle = e.hitFlash > 0 ? '#fff' : '#ff3b3b';
+ctx.strokeStyle = '#7a0000';
+ctx.lineWidth = 2;
+ctx.beginPath();
+ctx.moveTo(s, 0);
+ctx.lineTo(-s * 0.8, -s * 0.5);
+ctx.lineTo(-s * 0.4, 0);
+ctx.lineTo(-s * 0.8, s * 0.5);
+ctx.closePath();
+ctx.fill(); ctx.stroke();
+
+ctx.restore();
+}
+
+function drawBoss(b) {
+ctx.save();
+ctx.translate(b.x, b.y);
+const s = b.size;
+
+const rotorA = performance.now() / 25;
+ctx.save();
+ctx.rotate(rotorA);
+ctx.strokeStyle = 'rgba(255,200,200,0.6)';
+ctx.lineWidth = 3;
+ctx.beginPath();
+ctx.moveTo(-s * 1.4, 0); ctx.lineTo(s * 1.4, 0);
+ctx.moveTo(0, -s * 1.4); ctx.lineTo(0, s * 1.4);
+ctx.stroke();
+ctx.restore();
+
+ctx.fillStyle = b.hitFlash > 0 ? '#fff' : '#8b1a1a';
+ctx.strokeStyle = '#3d0000';
+ctx.lineWidth = 3;
+ctx.beginPath();
+ctx.ellipse(0, 0, s * 0.75, s, 0, 0, Math.PI * 2);
+ctx.fill(); ctx.stroke();
+
+ctx.fillStyle = '#ffe94d';
+ctx.beginPath();
+ctx.arc(-s * 0.28, -s * 0.15, s * 0.12, 0, Math.PI * 2);
+ctx.arc( s * 0.28, -s * 0.15, s * 0.12, 0, Math.PI * 2);
+ctx.fill();
+ctx.restore();
+
+const barW = W * 0.6;
+const barX = (W - barW) / 2;
+const barY = 70;
+ctx.fillStyle = 'rgba(0,0,0,0.5)';
+ctx.fillRect(barX - 2, barY - 2, barW + 4, 18);
+ctx.fillStyle = '#8b1a1a';
+ctx.fillRect(barX, barY, barW, 14);
+ctx.fillStyle = '#ff3b3b';
+ctx.fillRect(barX, barY, barW * (b.hp / b.maxHp), 14);
+ctx.strokeStyle = '#fff';
+ctx.lineWidth = 1;
+ctx.strokeRect(barX, barY, barW, 14);
+
+ctx.fillStyle = '#fff';
+ctx.font = '12px Arial';
+ctx.textAlign = 'center';
+ctx.fillText('BOSS', W / 2, barY - 4);
+}
+
+/* ================= HỖ TRỢ ================= */
+function burst(x, y, color, n) {
+for (let i = 0; i < n; i++) {
+const a = Math.random() * Math.PI * 2;
+const sp = 60 + Math.random() * 180;
+particles.push({
+x: x, y: y,
+vx: Math.cos(a) * sp,
+vy: Math.sin(a) * sp,
+r: 2 + Math.random() * 3,
+color: color,
+life: 0.5 + Math.random() * 0.3,
+maxLife: 0.8,
+});
+}
+}
+
+function showMsg(text, sec) {
+state.msg = text;
+state.msgTimer = sec;
+document.getElementById('bigmsg').textContent = text;
+}
+function hideMsg() {
+state.msg = '';
+state.msgTimer = 0;
+document.getElementById('bigmsg').textContent = '';
+}
+function showGuide(text) {
+document.getElementById('guide').textContent = text;
+}
+function hideGuide() {
+document.getElementById('guide').textContent = '';
+}
+
+function updateHud() {
+document.getElementById('levelTxt').textContent = state.level;
+document.getElementById('scoreTxt').textContent = state.score;
+document.getElementById('scoreTxt').style.color = state.score < 20 ? '#ff6b6b' : '#7CFC00';
+}
+
+function updateFighting() {
+fighting = bullets.length > 0 || eBullets.length > 0 || enemies.length > 0 || (boss && boss.hp < boss.maxHp);
+}
+
+/* ================= GAME OVER / WIN ================= */
+function gameOver() {
+state.over = true;
+state.running = false;
+stopBgMusic();
+hideMsg();
+hideGuide();
+const ov = document.getElementById('overlay');
+ov.innerHTML =
+'<h1 style="color:#ff3b3b">💥 GAME OVER</h1>' +
+'<p>Bạn đã bị bắn hạ ở Màn ' + state.level + '</p>' +
+'<p style="color:#ffe94d; font-size:20px; margin-top:10px;">Điểm cuối: ' + state.score + '</p>' +
+'<button id="restartBtn">CHƠI LẠI</button>';
+ov.style.display = 'flex';
+document.getElementById('restartBtn').onclick = restartGame;
+}
+
+function winGame() {
+state.over = true;
+state.running = false;
+stopBgMusic();
+hideMsg();
+hideGuide();
+const ov = document.getElementById('overlay');
+ov.innerHTML =
+'<h1 style="color:#7CFC00">🏆 CHIẾN THẮNG!</h1>' +
+'<p>Bạn đã hạ Boss và bảo vệ hòn đảo thành công!</p>' +
+'<p style="color:#ffe94d; font-size:22px; margin-top:14px;">Điểm cuối: ' + state.score + '</p>' +
+'<button id="restartBtn">CHƠI LẠI</button>';
+ov.style.display = 'flex';
+document.getElementById('restartBtn').onclick = restartGame;
+
+beep(880, 0.2, 'sine', 0.1);
+setTimeout(function(){ beep(1046, 0.2, 'sine', 0.1); }, 200);
+setTimeout(function(){ beep(1318, 0.2, 'sine', 0.1); }, 400);
+setTimeout(function(){ beep(1568, 0.5, 'sine', 0.1); }, 600);
+}
+
+function restartGame() {
+state.running = true;
+state.over = false;
+state.level = 1;
+state.score = 0;
+state.phase = 'intro';
+state.phaseTimer = 1.2;
+state.killsTotal = 0;
+state.waveIdx = 0;
+state.waveDone = false;
+state.landingTimer = 0;
+state.pendingNextLevel = false;
+state.flowStarted = false;
+
+enemies = [];
+bullets = [];
+eBullets = [];
+particles = [];
+boss = null;
+
+setupIsland();
+helicopter = makeHelicopter();
+
+document.getElementById('overlay').style.display = 'none';
+hideGuide();
+hideMsg();
+updateHud();
+
+initAudio();
+startBgMusic();
+}
+
+/* ================= ĐIỀU KHIỂN ================= */
+const input = {
+left: false,
+right: false,
+firePressed: false,
+fireHeld: false,
+};
+
+window.addEventListener('keydown', function(e) {
+const k = e.key.toLowerCase();
+if (k === 'a') input.left = true;
+if (k === 'd') input.right = true;
+if (k === 'w' && helicopter && !helicopter.landed) {
+helicopter.speed = Math.min(1.0, Math.round((helicopter.speed + 0.25) * 100) / 100);
+}
+if (k === 's' && helicopter && !helicopter.landed) {
+helicopter.speed = Math.max(-0.5, Math.round((helicopter.speed - 0.25) * 100) / 100);
+}
+if (e.code === 'Space' || k === ' ') {
+e.preventDefault();
+if (!input.fireHeld) {
+input.fireHeld = true;
+input.firePressed = true;
+fireBullet();
+}
+}
+});
+window.addEventListener('keyup', function(e) {
+const k = e.key.toLowerCase();
+if (k === 'a') input.left = false;
+if (k === 'd') input.right = false;
+if (e.code === 'Space' || k === ' ') input.fireHeld = false;
+});
+
+function bindHold(el, onDown, onUp) {
+el.addEventListener('touchstart', function(e){ e.preventDefault(); el.classList.add('active'); onDown(); }, {passive:false});
+el.addEventListener('touchend', function(e){ e.preventDefault(); el.classList.remove('active'); if(onUp) onUp(); }, {passive:false});
+el.addEventListener('touchcancel',function(e){ e.preventDefault(); el.classList.remove('active'); if(onUp) onUp(); }, {passive:false});
+el.addEventListener('mousedown', function(e){ e.preventDefault(); el.classList.add('active'); onDown(); });
+el.addEventListener('mouseup', function(e){ e.preventDefault(); el.classList.remove('active'); if(onUp) onUp(); });
+el.addEventListener('mouseleave', function(e){ el.classList.remove('active'); if(onUp) onUp(); });
+}
+function bindTap(el, fn) {
+el.addEventListener('touchstart', function(e){ e.preventDefault(); el.classList.add('active'); fn(); }, {passive:false});
+el.addEventListener('touchend', function(e){ e.preventDefault(); el.classList.remove('active'); }, {passive:false});
+el.addEventListener('mousedown', function(e){ e.preventDefault(); el.classList.add('active'); fn(); });
+el.addEventListener('mouseup', function(e){ e.preventDefault(); el.classList.remove('active'); });
+}
+
+bindHold(document.getElementById('btnA'), function(){ input.left = true; }, function(){ input.left = false; });
+bindHold(document.getElementById('btnD'), function(){ input.right = true; }, function(){ input.right = false; });
+
+bindTap(document.getElementById('btnW'), function() {
+if (helicopter && !helicopter.landed) {
+helicopter.speed = Math.min(1.0, Math.round((helicopter.speed + 0.25) * 100) / 100);
+}
+});
+bindTap(document.getElementById('btnS'), function() {
+if (helicopter && !helicopter.landed) {
+helicopter.speed = Math.max(-0.5, Math.round((helicopter.speed - 0.25) * 100) / 100);
+}
+});
+
+bindTap(document.getElementById('btnFire'), function() {
+if (!state.running) return;
+input.firePressed = true;
+fireBullet();
+});
+
+document.getElementById('startBtn').onclick = function() {
+state.running = true;
+state.over = false;
+state.level = 1;
+state.score = 0;
+state.phase = 'intro';
+state.phaseTimer = 1.2;
+state.killsTotal = 0;
+state.waveIdx = 0;
+state.waveDone = false;
+state.landingTimer = 0;
+state.pendingNextLevel = false;
+state.flowStarted = false;
+
+setupIsland();
+helicopter = makeHelicopter();
+enemies = []; bullets = []; eBullets = []; particles = [];
+boss = null;
+
+document.getElementById('overlay').style.display = 'none';
+hideGuide();
+hideMsg();
+updateHud();
+
+initAudio();
+startBgMusic();
+};
+</script>
+</body>
+</html>

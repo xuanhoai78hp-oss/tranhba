@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Flycam Đánh Cá</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { background:#060a18; color:#fff; font-family: sans-serif; text-align:center; min-height:100%; overflow:hidden; }
+#hud { position: fixed; top:0; left:0; right:0; padding: 50px 10px 8px; display:flex; justify-content:space-between; font-size:11px; font-weight:bold; z-index:20; }
+#hud .grp { display:flex; gap:6px; }
+#hud .item { background:rgba(0,217,255,0.18); border:1px solid rgba(0,217,255,0.5); padding:3px 8px; border-radius:6px; }
+#pinTxt.low { background:rgba(255,68,68,0.3); border-color:#ff4444; }
+#game { display:block; width:100vw; height:100vh; touch-action:none; background:linear-gradient(180deg,#1a3a5c 0%,#0d2137 100%); }
+#msg { position:fixed; top:30%; left:50%; transform:translateX(-50%); font-size:13px; font-weight:bold; padding:10px 18px; border-radius:12px; background:rgba(0,0,0,0.8); border:2px solid #00d9ff; color:#fff; max-width:90%; z-index:15; display:none; }
+#msg.show { display:block; }
+#dpad { position:fixed; left:14px; bottom:14px; width:160px; height:160px; z-index:100; display:none; }
+#dpad.show { display:block; }
+#dpad .dbtn { position:absolute; width:50px; height:50px; background:rgba(0,217,255,0.25); border:2px solid rgba(0,217,255,0.8); border-radius:12px; font-weight:bold; color:#fff; display:flex; align-items:center; justify-content:center; }
+#up { top:0; left:55px; }
+#left { top:55px; left:0; }
+#down { top:55px; left:55px; }
+#right { top:55px; left:110px; }
+#actionStack { position:fixed; right:14px; bottom:14px; display:none; flex-direction:column; gap:12px; z-index:100; }
+#actionStack.show { display:flex; }
+.abtn { width:70px; height:70px; border-radius:50%; border:3px solid #fff; color:#fff; font-size:24px; display:flex; align-items:center; justify-content:center; }
+#btnTakeoff { background:radial-gradient(circle,#00dd66,#006633); }
+#btnLand { background:radial-gradient(circle,#ff6b6b,#c0392b); }
+#overlay { position:fixed; inset:0; background:rgba(0,0,0,0.88); display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:500; padding:20px; }
+#overlay h2 { color:#00d9ff; margin-bottom:12px; }
+#overlay p { font-size:13px; line-height:1.7; color:#ccc; margin-bottom:6px; max-width:400px; }
+#overlay .hl { color:#ffd700; font-weight:bold; }
+#overlay button { margin-top:18px; padding:14px 34px; font-size:17px; font-weight:bold; border:none; border-radius:12px; background:linear-gradient(135deg,#00d9ff,#0066aa); color:#fff; cursor:pointer; }
+#menuBtn { position:fixed; top:10px; right:10px; width:90px; height:34px; border-radius:6px; background:#fff; border:2px solid #ff4444; display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:200; }
+#menuBtn span { color:#ff4444; font-size:20px; font-weight:bold; }
+#bottomLinks { position:fixed; inset:0; background:rgba(0,0,0,0.92); display:none; flex-direction:column; justify-content:center; align-items:center; gap:14px; z-index:400; padding:20px; }
+#bottomLinks.show { display:flex; }
+.bigBtn { display:block; width:80%; max-width:320px; padding:16px 22px; font-size:16px; font-weight:bold; border-radius:12px; text-decoration:none; color:#fff; text-align:center; }
+#goIndex { background:linear-gradient(135deg,#ff6b6b,#c0392b); }
+#goHeli { background:linear-gradient(135deg,#00d9ff,#0066aa); }
+#goSnake { background:linear-gradient(135deg,#7CFC00,#2e8b57); }
+#closeMenu { background:#333; color:#fff; padding:10px 24px; border-radius:10px; border:none; font-size:14px; margin-top:10px; cursor:pointer; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="hud">
+<div class="grp">
+<div class="item" id="levelTxt">CHUYẾN 1</div>
+<div class="item" id="cargoTxt">TRỐNG</div>
+</div>
+<div class="grp">
+<div class="item" id="pinTxt">100%</div>
+<div class="item" id="scoreTxt">0</div>
+<div class="item" id="timerTxt">00:00</div>
+</div>
+</div>
+<div id="msg"></div>
+<div id="menuBtn"><span>☰</span></div>
+<div id="dpad">
+<div class="dbtn" id="up">W</div>
+<div class="dbtn" id="left">A</div>
+<div class="dbtn" id="down">S</div>
+<div class="dbtn" id="right">D</div>
+</div>
+<div id="actionStack">
+<div class="abtn" id="btnLand">🛬</div>
+<div class="abtn" id="btnTakeoff">🛫</div>
+</div>
+<div id="overlay">
+<h2>🎣 FLYCAM ĐÁNH CÁ</h2>
+<p>Từ <span class="hl">Bến Tàu</span> (góc phải) → ra biển tìm <span class="hl">tàu cá</span> → thu hoạch cá → về bến giao cá + sạc pin.</p>
+<p>5 tàu cá trôi lênh đênh, liên tục đánh bắt thêm cá!</p>
+<p><b>W</b>:Tăng · <b>S</b>:Giảm · <b>A/D</b>:Quay · <b>Space</b>:Cất/Hạ</p>
+<button id="startBtn">🚀 BẮT ĐẦU</button>
+</div>
+<div id="bottomLinks">
+<h2 style="color:#ffd700;margin-bottom:10px;">Chuyển sang game khác</h2>
+<a class="bigBtn" id="goIndex" href="index.html">⚔️ TRANH BÁ GAME</a>
+<a class="bigBtn" id="goHeli" href="helicopter.html">🚁 LÁI TRỰC THĂNG</a>
+<a class="bigBtn" id="goSnake" href="snackantu.HTML">🐍 RẮN SĂN MỒI</a>
+<button id="closeMenu">← Đóng</button>
+</div>
+<script>
+var cvs=document.getElementById("game"),ctx=cvs.getContext("2d"),W=0,H=0;
+function rz(){W=window.innerWidth;H=window.innerHeight;cvs.width=W;cvs.height=H;}rz();window.onresize=rz;
+var state={running:false,over:false},MAP_W=1400,MAP_H=900;
+var land={x:1200,y:700,w:250,h:250};
+var harborZone={x:1150,y:680,r:70};
+var boats=[];
+function initBoats(){
+boats=[];
+for(var i=0;i<5;i++){
+boats.push({
+x:200+Math.random()*600,
+y:150+Math.random()*400,
+angle:Math.random()*Math.PI*2,
+speed:8+Math.random()*12,
+dirTimer:2+Math.random()*3,
+fish:20+Math.floor(Math.random()*30),
+maxFish:100,
+size:35
+});
+}
+}
+var cam={x:700,y:450,zoom:1},delivery=1,hasCargo=false,mission="to-boat",pin=100,score=0,startTime=0,elapsedTime=0;
+var drone=null;
+var aiDrone={x:0,y:0,angle:0,speed:0,landed:true,size:20,hasCargo:false,mission:"to-boat",delivery:0,pin:100};
+function makeDrone(){return{x:land.x-80,y:land.y-80,angle:-Math.PI/2,speed:0,landed:true,size:20};}
+function makeAI(){return{x:land.x-150,y:land.y-30,angle:-Math.PI/2,speed:0,landed:true,size:20,hasCargo:false,mission:"to-boat",delivery:0,pin:100};}
+function w2s(wx,wy){return{x:(wx-cam.x)*cam.zoom+W/2,y:(wy-cam.y)*cam.zoom+H/2};}
+function startMission(){
+mission="to-boat";hasCargo=false;drone=makeDrone();cam.x=land.x;cam.y=land.y;pin=100;score=0;delivery=1;
+aiDrone=makeAI();aiDrone.delivery=0;aiDrone.pin=100;aiDrone.landed=true;aiDrone.mission="to-boat";aiDrone.hasCargo=false;
+initBoats();updateHUD();
+showMsg("Bấm nút 🛫 để cất cánh!",3);
+}
+function getDistance(o1,o2){return Math.sqrt((o1.x-o2.x)*(o1.x-o2.x)+(o1.y-o2.y)*(o1.y-o2.y));}
+function updateBoats(dt){
+for(var i=0;i<boats.length;i++){
+var b=boats[i];
+b.dirTimer-=dt;
+if(b.dirTimer<=0){b.angle+=(-0.5+Math.random())*1.5;b.dirTimer=2+Math.random()*3;}
+b.x+=Math.cos(b.angle)*b.speed*dt;b.y+=Math.sin(b.angle)*b.speed*dt;
+if(b.x<50){b.x=50;b.angle=Math.PI-b.angle;}
+if(b.x>MAP_W-50){b.x=MAP_W-50;b.angle=Math.PI-b.angle;}
+if(b.y<50){b.y=50;b.angle=-b.angle;}
+if(b.y>MAP_H-50){b.y=MAP_H-50;b.angle=-b.angle;}
+if(b.fish<b.maxFish){b.fish+=0.8*dt;}
+if(b.maxFish<150){b.maxFish+=0.1*dt;}
+}
+}
+function updateAI(dt){
+var ai=aiDrone;
+if(ai.landed){
+if(ai.mission==="to-boat"){
+var targetBoat=null;
+if(ai.delivery>delivery){
+var farDist=-1;
+for(var i=0;i<boats.length;i++){if(boats[i].fish>=5){var d=getDistance(ai,boats[i]);if(d>farDist){farDist=d;targetBoat=boats[i];}}}
+}else{
+var nearDist=99999;
+for(var i=0;i<boats.length;i++){if(boats[i].fish>=5){var d=getDistance(ai,boats[i]);if(d<nearDist){nearDist=d;targetBoat=boats[i];}}}
+}
+if(targetBoat){ai.landed=false;ai.speed=0.4;}
+}else if(ai.mission==="back-home"){ai.landed=false;ai.speed=0.4;}
+}else{
+var maxSp=ai.hasCargo?0.5:0.8;
+if(ai.speed>maxSp){ai.speed=maxSp;}
+ai.x+=Math.cos(ai.angle)*ai.speed*180*dt;ai.y+=Math.sin(ai.angle)*ai.speed*180*dt;
+ai.x=Math.max(10,Math.min(MAP_W-10,ai.x));ai.y=Math.max(10,Math.min(MAP_H-10,ai.y));
+ai.pin-=(ai.hasCargo?0.7:0.4)*dt;
+if(ai.pin<=0){aiDrone=makeAI();showMsg("AI hết pin!",2);}
+if(ai.mission==="to-boat"){
+for(var i=0;i<boats.length;i++){
+var b=boats[i];
+if(getDistance(ai,b)<45&&!ai.hasCargo&&b.fish>=5){
+ai.hasCargo=true;
+var amount=b.fish>=30?15:30;amount=Math.min(amount,Math.floor(b.fish));
+b.fish-=amount;ai.mission="back-home";return;
+}
+}
+}
+if(ai.mission==="back-home"){
+if(getDistance(ai,harborZone)<50&&ai.hasCargo){ai.hasCargo=false;ai.delivery++;ai.pin=100;ai.mission="to-boat";}
+else if(getDistance(ai,harborZone)<50&&!ai.hasCargo){ai.pin=Math.min(100,ai.pin+25*dt);}
+}
+}
+var aiAngle=0;
+if(ai.mission==="to-boat"){
+var targetBoat=null;
+if(ai.delivery>delivery){
+var farDist=-1;
+for(var i=0;i<boats.length;i++){if(boats[i].fish>=5){var d=getDistance(ai,boats[i]);if(d>farDist){farDist=d;targetBoat=boats[i];}}}
+}else{
+var nearDist=99999;
+for(var i=0;i<boats.length;i++){if(boats[i].fish>=5){var d=getDistance(ai,boats[i]);if(d<nearDist){nearDist=d;targetBoat=boats[i];}}}
+}
+if(targetBoat){aiAngle=Math.atan2(targetBoat.y-ai.y,targetBoat.x-ai.x);}
+}else{aiAngle=Math.atan2(harborZone.y-ai.y,harborZone.x-ai.x);}
+var diff=aiAngle-ai.angle;while(diff>Math.PI){diff-=Math.PI*2;}while(diff<-Math.PI){diff+=Math.PI*2;}
+ai.angle+=diff*3*dt;ai.angle=aiAngle;
+}
+function update(dt){
+elapsedTime=(performance.now()-startTime)/1000;
+updateBoats(dt);updateAI(dt);
+if(!drone.landed){
+if(input.left){drone.angle-=2*dt;}
+if(input.right){drone.angle+=2*dt;}
+var maxSp=hasCargo?0.6:1;
+if(drone.speed>maxSp){drone.speed=maxSp;}
+if(drone.speed<-maxSp*0.3){drone.speed=-maxSp*0.3;}
+drone.x+=Math.cos(drone.angle)*drone.speed*200*dt;drone.y+=Math.sin(drone.angle)*drone.speed*200*dt;
+drone.x=Math.max(10,Math.min(MAP_W-10,drone.x));drone.y=Math.max(10,Math.min(MAP_H-10,drone.y));
+pin-=(hasCargo?0.8:0.5)*dt;
+if(pin<0){pin=0;}
+if(pin<=0){endGame("Hết pin!");return;}
+}
+updateCamera();checkLanded();checkCharging();updateHUD();
+}
+function checkCharging(){
+if(drone.landed&&getDistance(drone,harborZone)<50&&pin<100){pin+=8*0.016;if(pin>100){pin=100;}}
+}
+function updateCamera(){cam.zoom=drone.landed?1.2:0.85;cam.x+=(drone.x-cam.x)*0.1;cam.y+=(drone.y-cam.y)*0.1;}
+function checkLanded(){
+if(!drone.landed){return;}
+if(mission==="to-boat"){
+for(var i=0;i<boats.length;i++){
+var b=boats[i];
+if(Math.abs(drone.x-b.x)<45&&Math.abs(drone.y-b.y)<45&&!hasCargo&&b.fish>=5){
+hasCargo=true;
+var amount=b.fish>=30?15:30;amount=Math.min(amount,Math.floor(b.fish));
+b.fish-=amount;score+=amount*10;
+showMsg("Đã thu "+amount+" cá! +"+(amount*10),4);mission="back-home";return;
+}
+}
+}else if(mission==="back-home"){
+if(Math.abs(drone.x-harborZone.x)<50&&Math.abs(drone.y-harborZone.y)<50&&hasCargo){
+hasCargo=false;score+=50;pin=100;showMsg("Đã giao cá! +50",4);delivery++;mission="to-boat";
+}else if(Math.abs(drone.x-harborZone.x)<50&&Math.abs(drone.y-harborZone.y)<50&&!hasCargo){pin=100;showMsg("Đã sạc pin!",2);}
+}
+}
+function updateHUD(){
+document.getElementById("levelTxt").innerText="CHUYẾN "+delivery;
+document.getElementById("cargoTxt").innerText=hasCargo?"CÓ CÁ":"TRỐNG";
+var pinEl=document.getElementById("pinTxt");
+pinEl.innerText=Math.floor(pin)+"%";
+if(pin<20){pinEl.classList.add("low");}else{pinEl.classList.remove("low");}
+document.getElementById("scoreTxt").innerText=score;
+var m=Math.floor(elapsedTime/60),s=Math.floor(elapsedTime%60);
+document.getElementById("timerTxt").innerText=(m<10?"0":"")+m+":"+(s<10?"0":"")+s;
+}
+function showMsg(txt,sec){var el=document.getElementById("msg");el.innerText=txt;el.className="show";clearTimeout(showMsg._t);showMsg._t=setTimeout(function(){el.className="";},(sec||2.5)*1000);}
+function drawBoat(b){
+var sp=w2s(b.x,b.y);
+ctx.save();ctx.translate(sp.x,sp.y);ctx.scale(cam.zoom,cam.zoom);
+ctx.fillStyle="#8B4513";ctx.beginPath();ctx.moveTo(-25,-8);ctx.lineTo(25,-8);ctx.lineTo(20,10);ctx.lineTo(-20,10);ctx.closePath();ctx.fill();
+ctx.fillStyle="#D2691E";ctx.fillRect(-15,-14,30,8);ctx.fillStyle="#fff";ctx.fillRect(-8,-12,16,4);
+ctx.fillStyle="#4a90d9";ctx.beginPath();ctx.moveTo(0,-20);ctx.lineTo(5,-8);ctx.lineTo(-5,-8);ctx.closePath();ctx.fill();ctx.restore();
+var fishPct=b.fish/b.maxFish;
+ctx.fillStyle="rgba(0,0,0,0.6)";ctx.fillRect(sp.x-30,sp.y+20*cam.zoom,60,8);
+ctx.fillStyle=fishPct>0.5?"#00ff88":fishPct>0.25?"#ffaa00":"#ff4444";ctx.fillRect(sp.x-29,sp.y+21*cam.zoom,58*fishPct,6);
+ctx.fillStyle="#fff";ctx.font="bold 10px sans-serif";ctx.textAlign="center";ctx.fillText(Math.floor(b.fish),sp.x,sp.y+36*cam.zoom);
+}
+function drawDrone(d,color,hasCarg){
+var dp=w2s(d.x,d.y);
+ctx.save();ctx.translate(dp.x,dp.y);ctx.rotate(d.angle+Math.PI/2);
+ctx.fillStyle=color;ctx.beginPath();ctx.arc(0,0,d.size*cam.zoom*0.7,0,Math.PI*2);ctx.fill();
+ctx.fillStyle="#222";ctx.beginPath();ctx.arc(-6*cam.zoom,-3*cam.zoom,4*cam.zoom,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(6*cam.zoom,-3*cam.zoom,4*cam.zoom,0,Math.PI*2);ctx.fill();
+ctx.fillStyle="#fff";ctx.beginPath();ctx.arc(-5*cam.zoom,-3*cam.zoom,2*cam.zoom,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(7*cam.zoom,-3*cam.zoom,2*cam.zoom,0,Math.PI*2);ctx.fill();
+ctx.strokeStyle=color;ctx.lineWidth=3*cam.zoom;ctx.beginPath();ctx.moveTo(-12*cam.zoom,0);ctx.lineTo(-18*cam.zoom,-8*cam.zoom);ctx.stroke();ctx.beginPath();ctx.moveTo(12*cam.zoom,0);ctx.lineTo(18*cam.zoom,-8*cam.zoom);ctx.stroke();
+if(hasCarg){
+ctx.fillStyle="#4a90d9";ctx.beginPath();ctx.ellipse(0,-12*cam.zoom,6*cam.zoom,4*cam.zoom,0,0,Math.PI*2);ctx.fill();
+ctx.strokeStyle="#fff";ctx.lineWidth=2*cam.zoom;ctx.beginPath();ctx.moveTo(-5*cam.zoom,-12*cam.zoom);ctx.lineTo(-8*cam.zoom,-18*cam.zoom);ctx.stroke();ctx.beginPath();ctx.moveTo(5*cam.zoom,-12*cam.zoom);ctx.lineTo(8*cam.zoom,-18*cam.zoom);ctx.stroke();
+}
+ctx.restore();
+}
+function draw(){
+ctx.fillStyle="#0d2137";ctx.fillRect(0,0,W,H);
+for(var i=0;i<boats.length;i++){drawBoat(boats[i]);}
+var lp=w2s(land.x-land.w/2,land.y-land.h/2);
+ctx.fillStyle="#2d5a3d";ctx.fillRect(lp.x-land.w*cam.zoom/2,lp.y-land.h*cam.zoom/2,land.w*cam.zoom,land.h*cam.zoom);
+ctx.fillStyle="#1a3d2a";ctx.fillRect(lp.x-land.w*cam.zoom*0.3,lp.y-land.h*cam.zoom*0.4,land.w*cam.zoom*0.6,land.h*cam.zoom*0.7);
+var hp=w2s(harborZone.x,harborZone.y);
+ctx.fillStyle="#1e4d6b";ctx.beginPath();ctx.arc(hp.x,hp.y,harborZone.r*cam.zoom,0,Math.PI*2);ctx.fill();
+ctx.fillStyle="#3d7a8c";ctx.beginPath();ctx.arc(hp.x,hp.y,harborZone.r*0.7*cam.zoom,0,Math.PI*2);ctx.fill();
+ctx.fillStyle="#fff";ctx.font="bold 12px sans-serif";ctx.textAlign="center";ctx.fillText("BẾN",hp.x,hp.y+4);
+drawDrone(aiDrone,"#ff8800",aiDrone.hasCargo);
+if(aiDrone.delivery>delivery){ctx.fillStyle="#ff8800";ctx.font="bold 10px sans-serif";ctx.textAlign="center";ctx.fillText("AI:"+aiDrone.delivery,w2s(aiDrone.x,aiDrone.y-30).x,w2s(aiDrone.x,aiDrone.y-30).y);}
+if(drone){drawDrone(drone,"#00e0ff",hasCargo);}
+}
+var lastTime=0;
+function loop(ts){
+if(!lastTime){lastTime=ts;}
+var dt=Math.min((ts-lastTime)/1000,0.05);lastTime=ts;
+if(state.running&&!state.over){update(dt);}
+draw();requestAnimationFrame(loop);
+}requestAnimationFrame(loop);
+var input={left:false,right:false};
+window.onkeydown=function(e){
+if(e.key==="a"||e.key==="ArrowLeft"){input.left=true;}
+if(e.key==="d"||e.key==="ArrowRight"){input.right=true;}
+if(e.key==="w"||e.key==="ArrowUp"){if(drone&&!drone.landed){var maxSp=hasCargo?0.6:1;drone.speed=Math.min(maxSp,drone.speed+maxSp*0.25);}}
+if(e.key==="s"||e.key==="ArrowDown"){if(drone&&!drone.landed){var maxSp=hasCargo?0.6:1;drone.speed=Math.max(-maxSp*0.3,drone.speed-maxSp*0.25);}}
+if(e.key===" "){e.preventDefault();toggleTL();}
+};
+window.onkeyup=function(e){
+if(e.key==="a"||e.key==="ArrowLeft"){input.left=false;}
+if(e.key==="d"||e.key==="ArrowRight"){input.right=false;}
+};
+function bindBtn(id,on){var el=document.getElementById(id);el.ontouchstart=function(e){e.preventDefault();on();};el.onmousedown=on;}
+bindBtn("up",function(){if(drone&&!drone.landed){var maxSp=hasCargo?0.6:1;drone.speed=Math.min(maxSp,drone.speed+maxSp*0.25);}});
+bindBtn("down",function(){if(drone&&!drone.landed){var maxSp=hasCargo?0.6:1;drone.speed=Math.max(-maxSp*0.3,drone.speed-maxSp*0.25);}});
+bindBtn("left",function(){input.left=true;setTimeout(function(){input.left=false;},100);});
+bindBtn("right",function(){input.right=true;setTimeout(function(){input.right=false;},100);});
+bindBtn("btnTakeoff",function(){if(drone&&drone.landed){drone.landed=false;drone.speed=0.3;}});
+bindBtn("btnLand",function(){if(drone&&!drone.landed){drone.landed=true;drone.speed=0;}});
+function toggleTL(){if(!drone){return;}if(drone.landed){drone.landed=false;drone.speed=0.3;}else{drone.landed=true;drone.speed=0;}}
+document.getElementById("startBtn").onclick=function(){
+document.getElementById("overlay").style.display="none";
+document.getElementById("dpad").classList.add("show");
+document.getElementById("actionStack").classList.add("show");
+state.running=true;
+startTime=performance.now();
+startMission();
+};
+function endGame(reason){
+state.over=true;
+var ov=document.getElementById("overlay");
+ov.innerHTML="<h2 style='color:#f44'>KẾT THÚC</h2><p>"+reason+"</p><p>Chuyến: "+(delivery-1)+"</p><p>Điểm: "+score+"</p><button onclick='location.reload()'>CHƠI LẠI</button>";
+ov.style.display="flex";
+}
+document.getElementById("menuBtn").onclick=function(){document.getElementById("bottomLinks").classList.add("show");};
+document.getElementById("closeMenu").onclick=function(){document.getElementById("bottomLinks").classList.remove("show");};
+</script>
+</body>
+</html>

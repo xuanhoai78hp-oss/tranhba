@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>🐍 Rắn Săn Từ - Tiếng Việt</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html, body {
+background:#0f0f1e; color:#fff;
+font-family: 'Segoe UI', system-ui, -apple-system, Arial, sans-serif;
+text-align:center; min-height:100%;
+touch-action: manipulation;
+overflow-x:hidden;
+}
+body { padding:10px 10px 40px; }
+
+h1 { font-size:20px; margin:5px 0; color:#00d9ff; text-shadow:0 0 8px rgba(0,217,255,0.5); }
+
+#level { font-size:14px; color:#ff6b6b; margin:2px; font-weight:bold; }
+#score { font-size:16px; color:#00d9ff; margin:3px; font-weight:bold; }
+
+#word {
+font-size:26px; min-height:36px; color:#ffd700;
+margin:6px; font-weight:bold; letter-spacing:3px;
+text-shadow: 0 0 10px rgba(255,215,0,0.6);
+transition: transform 0.15s ease;
+}
+#word.pop { transform: scale(1.15); }
+
+#msg { font-size:13px; min-height:20px; margin:5px; }
+.good { color:#0f0; }
+.bad { color:#f00; }
+.rare { color:#ff0; text-shadow:0 0 6px #ff0; }
+.paused { color:#ff0; font-weight:bold; }
+.nest { color:#9b59b6; }
+.gate { color:#e74c3c; font-weight:bold; }
+
+#gameWrap {
+display: flex; justify-content: center;
+margin: 10px 0;
+}
+#game {
+background:#16213e;
+border:2px solid #00d9ff;
+border-radius:10px;
+display:block;
+box-shadow: 0 0 20px rgba(0,217,255,0.3);
+max-width: 100%;
+height: auto;
+touch-action: none;
+}
+
+/* ===== NÚT ĐIỀU KHIỂN ===== */
+#controls {
+display: flex; justify-content: center; align-items: center;
+gap: 12px; margin: 10px 0; flex-wrap: wrap;
+}
+.btn {
+border: none; border-radius: 8px; cursor: pointer;
+font-size: 15px; font-weight: bold; padding: 12px 22px;
+transition: transform 0.1s ease, background 0.15s ease;
+touch-action: manipulation;
+}
+.btn:active { transform: scale(0.95); }
+#start { background:#00d9ff; color:#000; }
+#soundBtn { background:#333; color:#fff; border:1px solid #00d9ff; padding:10px 14px; font-size:13px; }
+
+/* ===== NÚT WASD ẢO ===== */
+#dpad {
+position: fixed;
+left: 16px; bottom: 16px;
+width: 150px; height: 150px;
+z-index: 100;
+display: none; /* chỉ hiện khi chơi */
+}
+#dpad.show { display: block; }
+#dpad .dbtn {
+position: absolute;
+width: 50px; height: 50px;
+display: flex; align-items: center; justify-content: center;
+background: rgba(0, 217, 255, 0.25);
+border: 2px solid rgba(0, 217, 255, 0.7);
+border-radius: 10px;
+font-weight: bold; color:#fff; font-size:18px;
+touch-action: none;
+user-select: none;
+backdrop-filter: blur(2px);
+}
+#dpad .dbtn:active, #dpad .dbtn.active {
+background: rgba(255, 233, 77, 0.6);
+border-color: #ffe94d;
+}
+#up { top:0; left:50px; }
+#left { top:50px; left:0; }
+#down { top:50px; left:50px; }
+#right { top:50px; left:100px;}
+
+/* ===== NÚT HOME góc phải trên ===== */
+#btnHome {
+position: fixed; top: 12px; right: 12px;
+width: 46px; height: 46px;
+border-radius: 50%;
+background: rgba(255, 60, 60, 0.85);
+border: 2px solid #fff;
+color: #fff; font-size: 22px;
+display: flex; align-items: center; justify-content: center;
+cursor: pointer; z-index: 100;
+text-decoration: none;
+box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+transition: transform 0.15s ease;
+}
+#btnHome:active { transform: scale(0.92); }
+
+/* ===== 2 NÚT CUỐI TRANG (phải vuốt xuống mới thấy) ===== */
+#bottomLinks {
+margin-top: 60vh; /* đẩy xuống đáy trang */
+padding-bottom: 40px;
+display: flex; flex-direction: column;
+align-items: center; gap: 14px;
+}
+.bigBtn {
+display: block; width: 82%; max-width: 340px;
+padding: 18px 24px;
+font-size: 18px; font-weight: bold;
+border-radius: 14px; text-decoration: none;
+transition: transform 0.15s ease, box-shadow 0.15s ease;
+box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+}
+.bigBtn:active { transform: scale(0.96); }
+#goTranhBa {
+background: linear-gradient(135deg, #ff6b6b, #c0392b);
+color: #fff;
+}
+#goHeli {
+background: linear-gradient(135deg, #00d9ff, #0066aa);
+color: #fff;
+}
+
+/* Hint nhỏ báo có nút bên dưới */
+#scrollHint {
+margin-top: 30px;
+font-size: 13px; color: #ffd700;
+animation: bounce 1.5s infinite;
+opacity: 0.85;
+}
+@keyframes bounce {
+0%, 100% { transform: translateY(0); }
+50% { transform: translateY(8px); }
+}
+</style>
+</head>
+<body>
+
+<h1>🐍 Rắn Săn Từ - Tiếng Việt</h1>
+<div id="level">Level: 1</div>
+<div id="score">Score: 0</div>
+<div id="word">Ă</div>
+<div id="msg">Bấm START để chơi!</div>
+
+<div id="gameWrap">
+<canvas id="game" width="400" height="400"></canvas>
+</div>
+
+<div id="controls">
+<button id="start" class="btn" onclick="startGame()">▶ START</button>
+<button id="soundBtn" class="btn" onclick="toggleSound()">🔊 BẬT</button>
+</div>
+
+<!-- Nút WASD ảo -->
+<div id="dpad">
+<div class="dbtn" id="up">W</div>
+<div class="dbtn" id="left">A</div>
+<div class="dbtn" id="down">S</div>
+<div class="dbtn" id="right">D</div>
+</div>
+
+<!-- Nút Home góc phải trên -->
+<a id="btnHome" href="index.html" title="Về trang chủ">🏠</a>
+
+<!-- 2 nút cuối trang -->
+<div id="bottomLinks">
+<div id="scrollHint">⬇️ Vuốt xuống để xem thêm ⬇️</div>
+<a id="goTranhBa" class="bigBtn" href="index.html">⚔️ TRANH BÁ GAME</a>
+<a id="goHeli" class="bigBtn" href="helicopter.html">🚁 LÁI TRỰC THĂNG</a>
+</div>
+
+<script>
+'use strict';
+
+/* =============================
+🔊 ÂM THANH
+============================= */
+var audioCtx = null;
+var soundEnabled = true;
+
+function initAudio() {
+if (!audioCtx) {
+try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+catch(e) { console.warn('Web Audio API không hỗ trợ'); }
+}
+if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function playTone(freq, duration, type, volume, delay) {
+if (!soundEnabled) return;
+initAudio();
+if (!audioCtx) return;
+type = type || 'sine'; volume = volume || 0.12; delay = delay || 0;
+var startTime = audioCtx.currentTime + delay;
+var osc = audioCtx.createOscillator();
+var gain = audioCtx.createGain();
+osc.type = type;
+osc.frequency.setValueAtTime(freq, startTime);
+gain.gain.setValueAtTime(0, startTime);
+gain.gain.linearRampToValueAtTime(volume, startTime + 0.01);
+gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+osc.connect(gain); gain.connect(audioCtx.destination);
+osc.start(startTime); osc.stop(startTime + duration + 0.02);
+}
+
+function playMelody(notes) {
+if (!soundEnabled) return;
+initAudio();
+if (!audioCtx) return;
+var t = 0;
+for (var i = 0; i < notes.length; i++) {
+var n = notes[i];
+playTone(n.f, n.d, n.t || 'sine', n.v || 0.13, t);
+t += n.d * 0.85;
+}
+}
+function sfxEat() { playTone(880, 0.07, 'square', 0.10); playTone(1320, 0.07, 'square', 0.09, 0.05); }
+function sfxGood() { playMelody([{f:659,d:0.09,t:'square'},{f:784,d:0.09,t:'square'},{f:1047,d:0.15,t:'square',v:0.15}]); }
+function sfxBad() { playMelody([{f:220,d:0.18,t:'sawtooth',v:0.14},{f:180,d:0.25,t:'sawtooth',v:0.14}]); }
+function sfxNest() { playMelody([{f:523,d:0.10,t:'triangle',v:0.12},{f:392,d:0.14,t:'triangle',v:0.12}]); }
+function sfxGate() { playMelody([{f:523,d:0.10,t:'square'},{f:659,d:0.10,t:'square'},{f:784,d:0.10,t:'square'},{f:1047,d:0.10,t:'square',v:0.15},{f:1319,d:0.28,t:'square',v:0.16}]); }
+function sfxOver() { playMelody([{f:392,d:0.15,t:'square',v:0.14},{f:330,d:0.15,t:'square',v:0.14},{f:262,d:0.35,t:'sawtooth',v:0.15}]); }
+function sfxStart(){ playMelody([{f:392,d:0.10,t:'square'},{f:523,d:0.10,t:'square'},{f:659,d:0.20,t:'square',v:0.15}]); }
+
+function toggleSound() {
+soundEnabled = !soundEnabled;
+document.getElementById('soundBtn').innerText = soundEnabled ? '🔊 BẬT' : '🔇 TẮT';
+if (soundEnabled) sfxEat();
+}
+
+/* =============================
+🇻🇳 TỪ VỰNG TIẾNG VIỆT (2-5 ký tự, KHÔNG từ ghép 2 tiếng)
+============================= */
+var vnWords2 = ['AN','AO','BA','BE','BO','BU','CA','CO','DA','DE','DI','DO','DU','EM','GO','HA','HE','HI',
+'HO','LA','LE','LO','MA','ME','MI','MO','MU','NA','NE','NI','NO','NU','RA','RE','RI','RU',
+'SA','SE','SI','SO','SU','TA','TE','TI','TO','TU','VA','VE','VI','VO','VU','XA','XE','XI','XO','XU',
+'AI','AM','BI','ĐI','ĐO','ĐU','ĐA','ĐE','ĐÊ','ĐƠ','ĂN','ÂM','ÂN','ÊM','ÔI','ÔM','ÔN','ƠI','ƠN','ƯA','ƯU',
+'BÊ','DÊ','HÊ','KÊ','LÊ','MÊ','RÊ','TÊ','VÊ','XÊ',
+'BÔ','CÔ','DÔ','ĐÔ','GÔ','HÔ','LÔ','MÔ','NÔ','PÔ','RÔ','SÔ','TÔ','VÔ','XÔ',
+'BƠ','CƠ','DƠ','LƠ','MƠ','NƠ','SƠ','TƠ','VƠ','XƠ',
+'CƯ','DƯ','HƯ','LƯ','NƯ','SƯ','TƯ','XƯ'];
+
+var vnWords3 = ['TRÀ','MƯA','GIÓ','MÂY','TRỜI','ĐẤT','NƯỚC','LỬA','MẮT','TAI','MŨI','CHÂN','TAY','ĐẦU','BỤNG','LƯNG',
+'GÀ','CÁ','CHIM','MÈO','CHÓ','HEO','BÒ','DÊ','VỊT','NGỖNG','SÁCH','VỞ','BÚT','BẢNG','LỚP','BÀI','TOÁN','VĂN'];
+
+var vnWords4 = ['TRƯỜNG','HỌC','SINH','GIÁO','BẠN','BÈ','THẦY','CÔ','PHẤN','MÔN','ANH','YÊU','THƯƠNG','GIA','ĐÌNH','MÁI','NGHỀ','NƯỚC','NON','SÔNG','NÚI','BIỂN','CẢ','TRĂNG','SAO','HOA','LÁ','CÂY','CỎ','CHIM','CÁ'];
+
+var vnWords5 = ['HẠNH','PHÚC','TÌNH','NGHỀ','NGHIỆP','ƯỚC','TƯƠNG','SÁNG','THÔNG','MINH','CHĂM','CHỈ','KIÊN','NHẪN','TRUNG','THỰC','DŨNG','CẢM','VUI','VẺ'];
+
+var allVnWords = vnWords2.concat(vnWords3, vnWords4, vnWords5);
+
+function normalize(s) {
+if (!s) return '';
+return s.normalize('NFC').toUpperCase();
+}
+var allWordsSet = new Set(allVnWords.map(normalize));
+var allWordsArr = allVnWords.map(normalize);
+
+/* Kiểm tra có prefix khớp từ nào không */
+function canFormPrefix(word) {
+var w = normalize(word);
+if (w.length < 1) return true;
+for (var i = 0; i < allWordsArr.length; i++) {
+if (allWordsArr[i].startsWith(w)) return true;
+}
+return false;
+}
+
+var VN_CONSONANTS = 'BCDFGHJKLMNPQRSTVWXĐ';
+var VN_VOWELS = 'AĂÂEÊIOÔƠUƯY';
+var VN_ALL = VN_CONSONANTS + VN_VOWELS;
+
+/* =============================
+🎮 GAME SETUP
+============================= */
+var cvs = document.getElementById('game');
+var ctx = cvs.getContext('2d');
+
+/* Canvas responsive */
+function fitCanvas() {
+var maxDim = Math.min(window.innerWidth - 24, window.innerHeight * 0.55, 460);
+var dpr = Math.min(window.devicePixelRatio || 1, 2);
+cvs.style.width = maxDim + 'px';
+cvs.style.height = maxDim + 'px';
+cvs.width = Math.floor(maxDim * dpr);
+cvs.height = Math.floor(maxDim * dpr);
+ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+SZ_PX = maxDim;
+CELL = SZ_PX / GRID;
+}
+var GRID = 20;
+var SZ_PX = 400;
+var CELL = SZ_PX / GRID;
+
+/* Trạng thái game */
+var snake = []; // mảng cell {x, y}, snake[0] là đầu
+var dirX = 0, dirY = 0;
+var nextDirX = 0, nextDirY = 0;
+var foods = [];
+var currentWord = '';
+var score = 0;
+var level = 1;
+var baseInterval = 280; // ms / bước
+var stepInterval = 280;
+var paused = false;
+var running = false;
+var gameOver = false;
+var nest = { x: 2, y: 2 };
+var gate = null;
+var accTime = 0;
+var lastTime = 0;
+
+var eatCount = 0; // số mồi đã ăn (để cắt đuôi)
+const MAX_LEN = 10; // độ dài tối đa trước khi cắt
+const MAX_LEN_KEEP = 10; // cắt còn 10 ô
+
+function startGame() {
+initAudio();
+sfxStart();
+running = true;
+gameOver = false;
+paused = false;
+
+/* Rắn bắt đầu 3 khúc ở giữa */
+var cx = Math.floor(GRID / 2);
+var cy = Math.floor(GRID / 2);
+snake = [
+{ x: cx, y: cy },
+{ x: cx - 1, y: cy },
+{ x: cx - 2, y: cy },
+];
+dirX = 1; dirY = 0;
+nextDirX = 1; nextDirY = 0;
+
+score = 0;
+level = 1;
+eatCount = 0;
+stepInterval = baseInterval;
+gate = null;
+currentWord = VN_CONSONANTS[Math.floor(Math.random() * VN_CONSONANTS.length)];
+spawnFoods(5);
+updateUI();
+document.getElementById('start').style.display = 'none';
+document.getElementById('msg').innerText = 'Ăn mồi để ghép từ!';
+document.getElementById('msg').className = '';
+document.getElementById('dpad').classList.add('show');
+}
+
+function spawnFoods(count) {
+foods = [];
+for (var i = 0; i < count; i++) {
+spawnOneFood();
+}
+}
+
+function spawnOneFood() {
+var fx, fy, tries = 0;
+do {
+fx = Math.floor(Math.random() * GRID);
+fy = Math.floor(Math.random() * GRID);
+tries++;
+} while (tries < 100 && isOccupied(fx, fy));
+
+var pool = Math.random() < 0.7 ? VN_VOWELS : VN_ALL;
+var fc = pool[Math.floor(Math.random() * pool.length)];
+foods.push({ x: fx, y: fy, c: fc, pulse: Math.random() * Math.PI * 2 });
+}
+
+function isOccupied(fx, fy) {
+for (var i = 0; i < snake.length; i++) {
+if (snake[i].x === fx && snake[i].y === fy) return true;
+}
+for (var i = 0; i < foods.length; i++) {
+if (foods[i].x === fx && foods[i].y === fy) return true;
+}
+if (nest.x === fx && nest.y === fy) return true;
+if (gate && gate.x === fx && gate.y === fy) return true;
+return false;
+}
+
+function updateUI() {
+document.getElementById('score').innerText = 'Score: ' + score;
+document.getElementById('level').innerText = 'Level: ' + level;
+var w = document.getElementById('word');
+w.innerText = currentWord;
+w.classList.add('pop');
+setTimeout(function(){ w.classList.remove('pop'); }, 150);
+}
+
+/* =============================
+🧠 LOGIC BƯỚC ĐI
+============================= */
+function step() {
+if (paused || gameOver || !running) return;
+
+/* Áp dụng hướng mới */
+dirX = nextDirX;
+dirY = nextDirY;
+
+if (dirX === 0 && dirY === 0) return;
+
+/* Đầu rắn mới */
+var head = { x: snake[0].x + dirX, y: snake[0].y + dirY };
+
+/* Wrap (đi xuyên tường) */
+if (head.x < 0) head.x = GRID - 1;
+if (head.x >= GRID) head.x = 0;
+if (head.y < 0) head.y = GRID - 1;
+if (head.y >= GRID) head.y = 0;
+
+/* Va chạm với chính thân mình */
+for (var i = 1; i < snake.length; i++) {
+if (snake[i].x === head.x && snake[i].y === head.y) {
+endGame('💥 Đụng chính mình!');
+return;
+}
+}
+
+/* Kiểm tra ăn mồi */
+var ate = -1;
+for (var i = 0; i < foods.length; i++) {
+if (foods[i].x === head.x && foods[i].y === head.y) {
+ate = i; break;
+}
+}
+
+/* Đưa đầu vào trước */
+snake.unshift(head);
+
+if (ate >= 0) {
+var f = foods[ate];
+currentWord += f.c;
+foods.splice(ate, 1);
+sfxEat();
+eatCount++;
+
+/* Ăn quá 10 mồi → cắt còn 10 ô */
+if (snake.length > MAX_LEN) {
+while (snake.length > MAX_LEN_KEEP) snake.pop();
+}
+
+spawnOneFood();
+checkWord();
+} else {
+/* Không ăn → cắt đuôi */
+snake.pop();
+}
+
+/* Về ổ nhà */
+if (head.x === nest.x && head.y === nest.y) {
+currentWord = VN_CONSONANTS[Math.floor(Math.random() * VN_CONSONANTS.length)];
+var msg = document.getElementById('msg');
+msg.innerText = '🏠 Về ổ! Từ mới: ' + currentWord;
+msg.className = 'nest';
+sfxNest();
+updateUI();
+}
+
+/* Qua cổng */
+if (gate && head.x === gate.x && head.y === gate.y) {
+level = gate.target;
+stepInterval = Math.max(80, Math.floor(stepInterval * 0.85));
+var msg = document.getElementById('msg');
+msg.innerText = '🎉 Qua Cửa! Level ' + level;
+msg.className = 'gate';
+sfxGate();
+gate = null;
+
+/* Reset rắn về giữa */
+var cx = Math.floor(GRID / 2);
+var cy = Math.floor(GRID / 2);
+snake = [{ x: cx, y: cy }, { x: cx - 1, y: cy }, { x: cx - 2, y: cy }];
+dirX = 1; dirY = 0; nextDirX = 1; nextDirY = 0;
+spawnFoods(5);
+updateUI();
+}
+}
+
+/* =============================
+📝 KIỂM TRA TỪ
+============================= */
+function checkWord() {
+var msg = document.getElementById('msg');
+var w = normalize(currentWord);
+var isGood = allWordsSet.has(w);
+
+if (isGood) {
+var pts = w.length * 10;
+score += pts;
+var oldWord = currentWord;
+currentWord = VN_CONSONANTS[Math.floor(Math.random() * VN_CONSONANTS.length)];
+var emoji = w.length >= 4 ? '🔥' : '⭐';
+msg.innerText = emoji + ' ' + oldWord + '! +' + pts + ' điểm';
+msg.className = w.length >= 4 ? 'rare' : 'good';
+sfxGood();
+checkGate();
+} else {
+/* Kiểm tra xem từ hiện tại có khả năng thành từ không */
+var possible = false;
+for (var i = 0; i < allWordsArr.length; i++) {
+if (allWordsArr[i].startsWith(w)) { possible = true; break; }
+}
+if (!possible) {
+msg.innerText = '⚠️ Không tạo được từ! Về 🏠 reset!';
+msg.className = 'nest';
+} else {
+msg.innerText = '...';
+msg.className = '';
+}
+}
+updateUI();
+}
+
+function checkGate() {
+var msg = document.getElementById('msg');
+var nextLevelScore = level === 1 ? 100 : level === 2 ? 200 : level * 300;
+
+if (score >= nextLevelScore && !gate) {
+var nextLevel = level + 1;
+gate = { x: GRID - 2, y: GRID - 2, target: nextLevel };
+msg.innerText = '🚪 CỬA ' + nextLevel + ' xuất hiện! Qua cửa để lên Level ' + nextLevel;
+msg.className = 'gate';
+sfxGate();
+}
+}
+
+function endGame(reason) {
+gameOver = true;
+running = false;
+sfxOver();
+document.getElementById('msg').innerText = (reason || '💥 Game Over!') + ' Bấm START để chơi lại.';
+document.getElementById('msg').className = 'bad';
+document.getElementById('start').style.display = 'inline-block';
+document.getElementById('start').innerText = '▶ CHƠI LẠI';
+document.getElementById('dpad').classList.remove('show');
+}
+
+/* =============================
+🎨 VẼ
+============================= */
+function draw() {
+var w = SZ_PX;
+var h = SZ_PX;
+
+/* Nền */
+ctx.fillStyle = '#16213e';
+ctx.fillRect(0, 0, w, h);
+
+/* Lưới mờ */
+ctx.strokeStyle = 'rgba(0, 217, 255, 0.08)';
+ctx.lineWidth = 1;
+for (var i = 0; i <= GRID; i++) {
+ctx.beginPath(); ctx.moveTo(i * CELL, 0); ctx.lineTo(i * CELL, h); ctx.stroke();
+ctx.beginPath(); ctx.moveTo(0, i * CELL); ctx.lineTo(w, i * CELL); ctx.stroke();
+}
+
+/* Ổ nhà */
+ctx.fillStyle = 'rgba(155, 89, 182, 0.9)';
+ctx.beginPath();
+ctx.arc(nest.x * CELL + CELL/2, nest.y * CELL + CELL/2, CELL/2 - 2, 0, Math.PI*2);
+ctx.fill();
+ctx.font = 'bold ' + Math.floor(CELL*0.7) + 'px Arial';
+ctx.textAlign = 'center';
+ctx.textBaseline = 'middle';
+ctx.fillStyle = '#fff';
+ctx.fillText('🏠', nest.x * CELL + CELL/2, nest.y * CELL + CELL/2);
+
+/* Cổng */
+if (gate) {
+var gp = 0.5 + 0.5 * Math.sin(performance.now() / 200);
+ctx.fillStyle = 'rgba(231, 76, 60, ' + (0.7 + gp*0.3) + ')';
+ctx.fillRect(gate.x * CELL + 2, gate.y * CELL + 2, CELL - 4, CELL - 4);
+ctx.font = 'bold ' + Math.floor(CELL*0.7) + 'px Arial';
+ctx.fillStyle = '#fff';
+ctx.fillText('🚪', gate.x * CELL + CELL/2, gate.y * CELL + CELL/2);
+}
+
+/* Vẽ rắn — đầu bự, thân lắc lư, đuôi nhọn */
+drawSnake();
+
+/* Mồi */
+ctx.textAlign = 'center';
+ctx.textBaseline = 'middle';
+for (var i = 0; i < foods.length; i++) {
+var f = foods[i];
+var pulse = 1 + 0.15 * Math.sin(performance.now() / 300 + f.pulse);
+var size = Math.floor(CELL * 0.7 * pulse);
+ctx.font = 'bold ' + size + 'px "Segoe UI", Arial';
+ctx.fillStyle = i === 0 ? '#ffd700' : i < 3 ? '#ffaa00' : '#bbb';
+ctx.shadowColor = i < 3 ? '#ffd700' : 'transparent';
+ctx.shadowBlur = i < 3 ? 8 : 0;
+ctx.fillText(f.c, f.x * CELL + CELL/2, f.y * CELL + CELL/2);
+ctx.shadowBlur = 0;
+}
+}
+
+function drawSnake() {
+if (snake.length === 0) return;
+
+/* Vẽ thân từ đuôi lên đầu để đầu đè lên trên */
+for (var i = snake.length - 1; i >= 0; i--) {
+var seg = snake[i];
+var cx = seg.x * CELL + CELL / 2;
+var cy = seg.y * CELL + CELL / 2;
+
+if (i === 0) {
+/* Đầu — bự hơn */
+var headR = CELL * 0.5;
+var g = ctx.createRadialGradient(cx, cy, 2, cx, cy, headR);
+g.addColorStop(0, '#33e5ff');
+g.addColorStop(1, '#0099cc');
+ctx.fillStyle = g;
+ctx.beginPath();
+ctx.arc(cx, cy, headR, 0, Math.PI * 2);
+ctx.fill();
+
+/* Vẽ mắt theo hướng di chuyển */
+ctx.fillStyle = '#fff';
+var eo = CELL * 0.18;
+var dx = dirX, dy = dirY;
+/* Vector vuông góc */
+var px = -dy, py = dx;
+var e1x = cx + dx * eo + px * eo * 0.7;
+var e1y = cy + dy * eo + py * eo * 0.7;
+var e2x = cx + dx * eo - px * eo * 0.7;
+var e2y = cy + dy * eo - py * eo * 0.7;
+ctx.beginPath();
+ctx.arc(e1x, e1y, CELL * 0.10, 0, Math.PI * 2);
+ctx.arc(e2x, e2y, CELL * 0.10, 0, Math.PI * 2);
+ctx.fill();
+ctx.fillStyle = '#000';
+ctx.beginPath();
+ctx.arc(e1x, e1y, CELL * 0.05, 0, Math.PI * 2);
+ctx.arc(e2x, e2y, CELL * 0.05, 0, Math.PI * 2);
+ctx.fill();
+} else {
+/* Thân — lắc lư */
+var t = i / Math.max(1, snake.length - 1); // 0 = đầu, 1 = đuôi
+var wobble = Math.sin(performance.now() / 180 - i * 0.6) * CELL * 0.08 * t;
+
+/* Đầu nhỏ dần về đuôi */
+var radius;
+if (i === snake.length - 1) {
+radius = CELL * 0.15; // đuôi hơi nhọn
+} else {
+radius = CELL * (0.42 - t * 0.22);
+}
+
+/* Màu gradient từ sáng (gần đầu) đến tối (đuôi) */
+var hue = 190 - t * 40;
+var light = 60 - t * 25;
+ctx.fillStyle = 'hsl(' + hue + ', 85%, ' + light + '%)';
+
+/* Lắc lư theo trục vuông góc với hướng di chuyển hiện tại */
+var perpX = 0, perpY = 0;
+if (i < snake.length - 1) {
+var next = snake[i + 1];
+var vx = seg.x - next.x;
+var vy = seg.y - next.y;
+var l = Math.hypot(vx, vy);
+if (l > 0) {
+perpX = -vy / l;
+perpY = vx / l;
+}
+}
+
+ctx.beginPath();
+ctx.arc(cx + perpX * wobble, cy + perpY * wobble, radius, 0, Math.PI * 2);
+ctx.fill();
+}
+}
+}
+
+/* =============================
+🔄 LOOP (requestAnimationFrame)
+============================= */
+function loop(ts) {
+if (!lastTime) lastTime = ts;
+var dt = ts - lastTime;
+lastTime = ts;
+
+if (running && !paused && !gameOver) {
+accTime += dt;
+while (accTime >= stepInterval) {
+accTime -= stepInterval;
+step();
+}
+}
+
+draw();
+requestAnimationFrame(loop);
+}
+
+/* =============================
+🎮 INPUT
+============================= */
+function setDir(nx, ny) {
+if (!running || gameOver || paused) return;
+/* Không cho đổi ngược hướng hiện tại (180 độ) */
+if (snake.length > 1 && dirX === -nx && dirY === -ny) return;
+nextDirX = nx;
+nextDirY = ny;
+}
+
+document.addEventListener('keydown', function(e) {
+var k = e.key.toLowerCase();
+if (k === ' ' || e.code === 'Space') {
+e.preventDefault();
+paused = !paused;
+document.getElementById('msg').innerText = paused ? '⏸️ TẠM DỪNG' : 'Tiếp tục!';
+document.getElementById('msg').className = paused ? 'paused' : '';
+return;
+}
+if (paused) return;
+if (k === 'w' || k === 'arrowup') { e.preventDefault(); setDir(0, -1); }
+if (k === 's' || k === 'arrowdown') { e.preventDefault(); setDir(0, 1); }
+if (k === 'a' || k === 'arrowleft') { e.preventDefault(); setDir(-1, 0); }
+if (k === 'd' || k === 'arrowright') { e.preventDefault(); setDir( 1, 0); }
+});
+
+/* Swipe trên canvas */
+var touchStartX = 0, touchStartY = 0;
+cvs.addEventListener('touchstart', function(e) {
+touchStartX = e.touches[0].clientX;
+touchStartY = e.touches[0].clientY;
+}, { passive: true });
+
+cvs.addEventListener('touchend', function(e) {
+if (paused) return;
+var ex = e.changedTouches[0].clientX;
+var ey = e.changedTouches[0].clientY;
+var dx = ex - touchStartX;
+var dy = ey - touchStartY;
+if (Math.abs(dx) < 20 && Math.abs(dy) < 20) return;
+
+if (Math.abs(dx) > Math.abs(dy)) {
+setDir(dx > 0 ? 1 : -1, 0);
+} else {
+setDir(0, dy > 0 ? 1 : -1);
+}
+}, { passive: true });
+
+/* Nút WASD ảo */
+function bindDirBtn(el, nx, ny) {
+var press = function(e) {
+if (e) e.preventDefault();
+el.classList.add('active');
+setDir(nx, ny);
+};
+var release = function(e) {
+if (e) e.preventDefault();
+el.classList.remove('active');
+};
+el.addEventListener('touchstart', press, { passive: false });
+el.addEventListener('touchend', release, { passive: false });
+el.addEventListener('touchcancel', release, { passive: false });
+el.addEventListener('mousedown', press);
+el.addEventListener('mouseup', release);
+el.addEventListener('mouseleave', release);
+}
+bindDirBtn(document.getElementById('up'), 0, -1);
+bindDirBtn(document.getElementById('down'), 0, 1);
+bindDirBtn(document.getElementById('left'), -1, 0);
+bindDirBtn(document.getElementById('right'), 1, 0);
+
+/* =============================
+🚀 INIT
+============================= */
+window.addEventListener('resize', fitCanvas);
+fitCanvas();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
